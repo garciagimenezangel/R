@@ -1,5 +1,6 @@
 library(raster)
 library(rgdal)
+library(dplyr)
 
 ######################################################
 # Clean session
@@ -13,10 +14,23 @@ setwd(work_dir);
 source("config.R")
 
 # Extract geodata
-if (GEE_tables) source("GetGeodata_GEEtables.R")
-if (KLAB_layers) source("GetGeodata_KLabLayers.R")
+if (GEE_tables) {
+  source("GetGeodata_GEEtables.R");
+  geodata_gee = GetGeodata_GEEtables();
+}
+if (KLAB_layers) {
+  source("GetGeodata_KLabLayers.R");
+  geodata_KLab = GetGeodata_KLabLayers();
+}
+
+# Merge results from different sources
+df_final = merge(geodata_gee, geodata_KLab, by = base_col_names)
+
+# Sort table by the two first columns (they should be "study_id" and "field_id")
+ord = order(df_final[,1], as.numeric(df_final[,2]))
+df_final = df_final[ord,]
 
 # Write csv 
-write.csv(df_out, out_file, row.names=FALSE) 
-print("Output table:");
-print(out_file);
+write.csv(df_final, out_file, row.names=FALSE) 
+print("Output table:")
+print(out_file)

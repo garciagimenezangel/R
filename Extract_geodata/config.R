@@ -7,7 +7,7 @@ ds_names = c("field_level_data_Bartomeus2015",
 datasets = paste(ds_names, ".csv", sep="")
 
 # Source of geolocalized measurements
-KLAB_layers = FALSE
+KLAB_layers = TRUE
 GEE_tables = TRUE
 
 # Folders
@@ -24,4 +24,4 @@ out_file = paste(Sys.Date(), ".csv", sep = "")
 out_file = paste(output_folder, out_file, sep = "")
 
 # Other Settings
-coords_digits = 3; # Precision of the coordinates when doing JOIN operations between tables
+coords_digits = 3 # Precision of the coordinates when doing JOIN operations between tables
