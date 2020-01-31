@@ -6,8 +6,8 @@ library(dplyr)
 # Clean session
 rm(list = ls())
 
-# Working directory 
-work_dir = "C:/Users/angel.gimenez/Documents/Projects/OBServ/R/Extract_geodata/";
+# Working directory
+work_dir = "C:/Users/angel.gimenez/Documents/Projects/OBServ/R repo/Extract geodata/"
 setwd(work_dir);
 
 # Configuration file
