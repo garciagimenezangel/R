@@ -8,7 +8,7 @@
 # Input/Output variables set in "config.R"
 #
 # INPUT: 
-# - OBServ datasets (CSV)
+# - OBServ datasets (CSV) (field data)
 # - Measures from Google Earth Engine (CSV point samples)
 # - Coordinates' precision in the merge process (rows with coordinates equal within such precision,
 #   will be considered equal in the merge process)

@@ -2,8 +2,7 @@
 
 # Datasets
 ds_names = c("field_level_data_Bartomeus2015",
-             "field_level_data_Garibaldi2016",
-             "field_level_data_Fijen2016")
+             "field_level_data_Garibaldi2016")
 datasets = paste(ds_names, ".csv", sep="")
 
 # Source of geolocalized measurements

@@ -6,7 +6,7 @@
 # Input/Output variables set in "config.R"
 #
 # INPUT: 
-# - OBServ datasets (CSV)
+# - OBServ datasets (CSV) (field data)
 # - Folders where the .tiff files are stored
 # OUTPUT:
 # - Table CSV, merging OBServ datasets and sampled measurements

@@ -13,7 +13,7 @@
 # Input/Output variables set in "config.R"
 #
 # INPUT: 
-# - OBServ datasets (CSV)
+# - OBServ datasets (CSV) (field data)
 # - Root folders of the KLab-models' output files
 # OUTPUT:
 # - Table CSV, merging OBServ datasets and KLab models. For each model, a new column is added,
@@ -24,16 +24,30 @@
 
 GetPredictions_KLabModels <- function() {
   
-  # Set (using reg expr) extensions acceptable to be considered as a model output
-  valid_ext = "*.(tiff|tif)$"
+  # Set criteria (using reg expr) acceptable to be considered as a model output
+  ext_valid   = ".(tiff|tif)$"
+  reg_defined = ".region"
   
   # Models = list of files in the KLAB_root folder that match the valid extensions defined above
-  model_files = list.files(KLAB_root, full.names = FALSE, recursive = TRUE, pattern = valid_ext);
+  model_files = list.files(KLAB_root, full.names = FALSE, recursive = TRUE);
+  
+  # Filter according to defined criteria
+  accept = str_detect(model_files, ext_valid) & str_detect(model_files, reg_defined);
+  model_files = model_files[accept];
   
   # Get model ids
-  model_ids = tools::file_path_sans_ext(model_files); # name of the files without extension
-  model_ids = gsub("/", ".", model_ids);              # replace slashes by points
+  dict_models <- list();
+  model_ids = sub(".region.*", '', model_files); # name of the files before ".region (used as ID of the model)
+  model_ids = gsub("/", ".", model_ids);         # replace slashes by points
   
+  # Store relation model_id and model_file in a dictionary
+  for (i in seq(model_files)) { 
+    model_id = model_ids[i];
+    already_associated = dict_models[[model_id]];                          # model files already associated to that id in the dictionary
+    dict_models[[model_ids[i]]] = c(already_associated, model_files[i]);   # add this model file
+  }
+  model_ids = unique(model_ids);
+
   # Output dataframe 
   col_names = c(base_col_names, model_ids)
   df_out = data.frame(matrix(ncol = length(col_names), nrow = 0))
@@ -54,15 +68,20 @@ GetPredictions_KLabModels <- function() {
     sp<-SpatialPoints(coords)
     
     # Loop models
-    for (i_model in seq(model_files)) {
+    for (model_id in model_ids) {
       
       # Init dataframe for this model
       model_data = data.frame(matrix(ncol = 1, nrow = nrow(coords)))
-      names(model_data) = model_ids[i_model];
+      names(model_data) = model_id;
       
-      # Extract data from the model file
-      rast<-raster(paste(KLAB_root, model_files[i_model], sep=""));
-      model_data[,1] = extract(rast, sp, method='bilinear');
+      # Loop files associated to the model
+      assoc_files = dict_models[[model_id]];
+      for (assoc_file in assoc_files) {
+        rast<-raster(paste(KLAB_root, assoc_file, sep=""));     # Extract data from the model file
+        values = extract(rast, sp, method='bilinear');
+        found  = !is.na(values); 
+        model_data[found, 1] = values[found]
+      }
 
       # Add extracted data to temporary dataframe
       df_temp = cbind(df_temp, model_data);

@@ -1,6 +1,7 @@
 library(raster)
 library(rgdal)
 library(dplyr)
+library(stringr)
 
 ######################################################
 # Clean session
