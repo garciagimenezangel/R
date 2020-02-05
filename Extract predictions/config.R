@@ -12,7 +12,7 @@ KLAB_models = TRUE
 # Folders
 KLAB_root = "../../Data/KLab Models/"
 field_data_folder = "../../AA_GITHUB/data/"
-output_folder = "../../Data/Processed predictions/"
+output_folder = "../../Data/Processed modeldata/"
 
 # Column names that will be in datasets and in the processed geodata tables
 base_col_names = c("study_id", "field_id", "latitude", "longitude") 
