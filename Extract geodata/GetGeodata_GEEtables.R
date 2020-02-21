@@ -60,7 +60,7 @@ GetGeodata_GEEtables <- function() {
       geo_data = geo_data[!duplicated(geo_data),]
       
       # LEFT JOIN tables
-      df_temp = merge(df_temp, geo_data, all.x=TRUE, by=c("round_lon","round_lat"))
+      df_temp = merge(df_temp, geo_data, all.x=TRUE, by=c("round_lon","round_lat","sampling_year"))
       
       # Rename added column (the last one) in df_temp with geo_name
       names(df_temp)[length(names(df_temp))] = geo_names[i_geo]

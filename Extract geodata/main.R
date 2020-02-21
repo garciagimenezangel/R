@@ -14,14 +14,12 @@ setwd(work_dir);
 source("config.R")
 
 # Extract geodata
-if (GEE_tables) {
-  source("GetGeodata_GEEtables.R");
-  geodata_gee = GetGeodata_GEEtables();
-}
-if (KLAB_layers) {
-  source("GetGeodata_KLabLayers.R");
-  geodata_KLab = GetGeodata_KLabLayers();
-}
+# GEE
+source("GetGeodata_GEEtables.R");
+geodata_gee = GetGeodata_GEEtables();
+# KLAB_layers
+source("GetGeodata_KLabLayers.R");
+geodata_KLab = GetGeodata_KLabLayers();
 
 # Merge results from different sources
 df_final = merge(geodata_gee, geodata_KLab, by = base_col_names)

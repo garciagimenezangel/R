@@ -1,22 +1,20 @@
 ######################################################
 
 # Datasets
-ds_names = c("field_level_data_Bartomeus2015",
-             "field_level_data_Garibaldi2016")
+ds_names = c("field_level_data_Bart01",
+             "field_level_data_Gari01",
+             "field_level_data_Hevi01",
+             "field_level_data_Knap01")
 datasets = paste(ds_names, ".csv", sep="")
-
-# Source of geolocalized measurements
-KLAB_layers = TRUE
-GEE_tables = TRUE
 
 # Folders
 KLAB_root = "../../Data/KLab Layers"
-GEE_root = "C:/Users/angel.gimenez/Google Drive/OBServ"
+GEE_root = "../../Data/GEE Layers"
 field_data_folder = "../../AA_GITHUB/data/"
 output_folder = "../../Data/Processed geodata/"
 
 # Column names that will be in datasets and in the processed geodata tables
-base_col_names = c("study_id", "field_id", "latitude", "longitude") 
+base_col_names = c("study_id", "site_id", "sampling_year", "latitude", "longitude") 
 
 # Output file
 out_file = paste(Sys.Date(), ".csv", sep = "")

@@ -28,7 +28,7 @@ GetValues_KLabModels <- function() {
   ext_valid   = ".(tiff|tif)$"
   reg_defined = ".region"
   
-  # Models = list of files in the KLAB_root folder that match the valid extensions defined above
+  # Models = list of files in the KLAB_root folder
   model_files = list.files(KLAB_root, full.names = FALSE, recursive = TRUE);
   
   # Filter according to defined criteria
@@ -36,11 +36,11 @@ GetValues_KLabModels <- function() {
   model_files = model_files[accept];
   
   # Get model ids
-  dict_models <- list();
   model_ids = sub(".region.*", '', model_files); # name of the files before ".region (used as ID of the model)
   model_ids = gsub("/", ".", model_ids);         # replace slashes by points
   
   # Store relation model_id and model_file in a dictionary
+  dict_models <- list();
   for (i in seq(model_files)) { 
     model_id = model_ids[i];
     already_associated = dict_models[[model_id]];                          # model files already associated to that id in the dictionary
@@ -61,7 +61,7 @@ GetValues_KLabModels <- function() {
     df = read.csv(file= paste(field_data_folder, ds, sep = ""), header=T);
     df_temp = df[base_col_names]
     
-    # Coordinates to extract geodata
+    # Coordinates to extract model data
     coords = cbind(df_temp["longitude"], df_temp["latitude"])
     coords = coords[!is.na(coords["longitude"]) & !is.na(coords["latitude"]),]
     if (nrow(coords) == 0) next

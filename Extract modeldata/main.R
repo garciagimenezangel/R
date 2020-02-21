@@ -14,14 +14,20 @@ setwd(work_dir);
 # Configuration file
 source("config.R")
 
-# Extract predictions from different sources (for now, only from KLab models)
-if (KLAB_models) {
-  source("GetValues_KLabModels.R");
-  df_klab = GetValues_KLabModels();
-}
+# Extract model data 
+# kLAB
+source("GetValues_KLabModels.R");
+df_klab = GetValues_KLabModels();
+# GEE
+source("GetValues_GEEModels.R");
+df_gee = GetValues_GEEModels();
 
-# Stack predictions (for now, only KLab models)
-df_final = rbind(df_klab);
+# Merge results from different sources
+df_final = merge(df_klab, df_gee, by = base_col_names)
+
+# Sort table by the two first columns (they should be "study_id" and "field_id")
+ord = order(df_final[,1], as.numeric(df_final[,2]))
+df_final = df_final[ord,]
 
 # Write csv 
 write.csv(df_final, out_file, row.names=FALSE) 

@@ -1,21 +1,20 @@
 ######################################################
 
 # Datasets
-ds_names = c("field_level_data_Bartomeus2015",
-             "field_level_data_Garibaldi2016",
-             "field_level_data_Fijen2016")
+ds_names = c("field_level_data_Bart01",
+             "field_level_data_Gari01",
+             "field_level_data_Hevi01",
+             "field_level_data_Knap01")
 datasets = paste(ds_names, ".csv", sep="")
-
-# Source of predictions
-KLAB_models = TRUE
 
 # Folders
 KLAB_root = "../../Data/KLab Models/"
+GEE_root = "../../Data/GEE Models/"
 field_data_folder = "../../AA_GITHUB/data/"
 output_folder = "../../Data/Processed modeldata/"
 
 # Column names that will be in datasets and in the processed geodata tables
-base_col_names = c("study_id", "field_id", "latitude", "longitude") 
+base_col_names = c("study_id", "site_id", "sampling_year", "latitude", "longitude") 
 
 # Output file
 out_file = paste(Sys.Date(), ".csv", sep = "")
