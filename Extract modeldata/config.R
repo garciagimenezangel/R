@@ -8,10 +8,10 @@ ds_names = c("field_level_data_Bart01",
 datasets = paste(ds_names, ".csv", sep="")
 
 # Folders
-KLAB_root = "../../Data/KLab Models/"
-GEE_root = "../../Data/GEE Models/"
-field_data_folder = "../../AA_GITHUB/data/"
-output_folder = "../../Data/Processed modeldata/"
+KLAB_root = "C:/Users/angel.gimenez/Google Drive/Projects/OBServ/Data/KLab Models"
+GEE_root = "C:/Users/angel.gimenez/Google Drive/Projects/OBServ/Data/GEE Models"
+field_data_folder = "../../_Main Repo/data/"
+output_folder = "C:/Users/angel.gimenez/Google Drive/Projects/OBServ/Data/Processed geodata/"
 
 # Column names that will be in datasets and in the processed geodata tables
 base_col_names = c("study_id", "site_id", "sampling_year", "latitude", "longitude") 
@@ -22,3 +22,4 @@ out_file = paste(output_folder, out_file, sep = "")
 
 # Other Settings
 coords_digits = 3 # Precision of the coordinates when doing JOIN operations between tables
+
