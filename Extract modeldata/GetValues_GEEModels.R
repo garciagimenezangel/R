@@ -35,7 +35,7 @@ GetValues_GEEModels <- function() {
   model_files = model_files[accept];
   
   # Get model ids
-  model_ids = sub(".region.*", '', model_files); # name of the files before ".region (used as ID of the model)
+  model_ids = tools::file_path_sans_ext(model_files);
   model_ids = gsub("/", ".", model_ids);         # replace slashes by points
   
   # Output dataframe 
