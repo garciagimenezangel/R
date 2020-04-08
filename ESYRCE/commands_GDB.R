@@ -2,8 +2,7 @@
 require(rgdal)
 
 # The input file geodatabase
-setwd("C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/Data/Land cover/ESYRCE")
-fgdb<-"Esyrce2001_2016.gdb"
+fgdb<-"C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/Data/Land cover/ESYRCE/Esyrce2001_2016.gdb"
 
 # List all feature classes in a file geodatabase
 subset(ogrDrivers(), grepl("GDB", name))

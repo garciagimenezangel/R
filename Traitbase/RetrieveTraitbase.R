@@ -1,9 +1,6 @@
 library(dplyr)
 
-# working directory
-work_dir = "C:/Users/angel.gimenez/Documents/Projects/OBServ/R/";
-setwd(work_dir)
-data_file = "../Data/Traitbase/Apoidea/data.csv"
+data_file = "C:/Users/angel.gimenez/Documents/DATA/OBServ/Traitbase/Apoidea/data.csv"
 tdata = read.csv(file=data_file,header=T)
 
 summary(tdata %>% select(m_plant_genus))
