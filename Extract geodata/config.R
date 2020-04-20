@@ -10,7 +10,7 @@ datasets = paste(ds_names, ".csv", sep="")
 # Folders
 KLAB_root = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/Data/KLab Layers/"
 GEE_root = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/Data/GEE Layers/"
-field_data_folder = "../../_OBServ/data/"
+field_data_folder = "../../OBServ/data/"
 output_folder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/Data/Processed geodata/"
 
 # Column names that will be in datasets and in the processed geodata tables
