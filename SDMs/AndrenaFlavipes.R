@@ -81,12 +81,17 @@ if (observReady) {
 
 # Presence data: column "presence" == 1
 dfInsectPresence = dfInsectSampling[dfInsectSampling$pollinator %in% c(species, otherNames) ,]
+dfInsectPresence["pollinator"]  = rep(species, nrow(dfInsectPresence)) # other_names -> species name
 dfObservPresence = merge(dfInsectPresence, dfFieldData, by=c("study_id", "site_id"))
 names(dfObservPresence)[names(dfObservPresence) == "longitude"] <- "lon"
 names(dfObservPresence)[names(dfObservPresence) == "latitude"]  <- "lat"
 dfGbifPresence   = dfGbif[c("lat","lon","country")]
+dfGbifPresence["pollinator"]  = rep(species, nrow(dfGbifPresence))
 dfPresence       = plyr::rbind.fill(dfObservPresence, dfGbifPresence)
+dfPresence       = dfPresence[!is.na(dfPresence$lat) & !is.na(dfPresence$lon),]
 dfPresence["presence"]  = rep(1, nrow(dfPresence))
+# Remove duplicated locations
+dfPresence = dfPresence[!duplicated(dfPresence[c("lon","lat")]),]
 
 # Pseudo-absence data: column "presence" == 0
 # Exclude species that show pattern $excludeInAbsenceSelection
@@ -104,6 +109,7 @@ dfInsectAbsence = anti_join(dfInsectAbsence, dfInsectPresence, by=c("study_id", 
 dfAbsence = merge(dfInsectAbsence, dfFieldData, by=c("study_id", "site_id"))
 names(dfAbsence)[names(dfAbsence) == "longitude"] <- "lon"
 names(dfAbsence)[names(dfAbsence) == "latitude"]  <- "lat"
+dfAbsence = dfAbsence[!is.na(dfAbsence$lat) & !is.na(dfAbsence$lon),]
 dfAbsence["presence"]  = rep(0, nrow(dfAbsence))
 # Take points within the convex hull of the presence points
 conHull   = convHull(dfPresence[c("lon","lat")])
@@ -113,9 +119,12 @@ for(i in seq(1:length(absPoints))) {
   inConHull[i] = gContains(conHull@polygons, absPoints[i])
 }
 dfAbsence = dfAbsence[inConHull,]
+# Remove duplicated locations
+dfAbsence = dfAbsence[!duplicated(dfAbsence[c("lon","lat")]),]
 
 # Bind presence and pseudo-absence locations
-dfLocations = rbind(dfPresence[c("presence","lon","lat")], dfAbsence[c("presence","lon","lat")])
+dfLocations = rbind(dfPresence[c("presence","pollinator","lon","lat")], dfAbsence[c("presence","pollinator","lon","lat")])
+
 
 # Plot
 data(wrld_simpl)
@@ -123,14 +132,24 @@ plot(wrld_simpl, xlim=c(-10,30), ylim=c(30,70), axes=TRUE, col="light yellow")
 # restore the box around the map
 box()
 # plot points
-points(dfPresence$lon, dfPresence$lat, col='orange', pch=20, cex=0.75)
+points(dfAbsence$lon, dfAbsence$lat, col='orange', pch=20, cex=0.75)
 # plot points again to add a border, for better visibility
-points(dfPresence$lon, dfPresence$lat, col='red', cex=0.75)
+points(dfAbsence$lon, dfAbsence$lat, col='red', cex=0.75)
 
 
 ###############################
-# 2. Clean data (CoordinateCleaner + kernel density estimator (KDE))
-#rl <- clean_coordinates(dfLocations, lon = "lon", lat = "lat")
+# 2. Clean data (CoordinateCleaner)
+rownames(dfLocations)<-1:nrow(dfLocations)
+test <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
+                          tests = c("capitals", 
+                                    "centroids",
+                                    "equal", 
+                                    "gbif", 
+                                    "institutions", 
+                                    "seas",
+                                    "outliers",
+                                    "zeros"))
+dfLocations = dfLocations[test$.summary,]
 
 
 # 3. Sampling bias. Take absence points as locations in the OBServ datasets 
