@@ -4,6 +4,7 @@
 ###############
 # loads the dismo library
 library(dismo)
+library(raster)
 
 ###############
 # Retrieve occurrence records of Bombus Terrestris in Europe since 2018
@@ -81,7 +82,6 @@ points(bg, cex=0.5)
 
 ###############
 # Environmental data
-library(raster)
 wclim0 = getData('worldclim', var='bio', res=0.5, lon=-16, lat=28)
 wclim1 = getData('worldclim', var='bio', res=0.5, lon=-3.7, lat=40.41)
 wclim2 = getData('worldclim', var='bio', res=0.5, lon=1, lat=40.41)
