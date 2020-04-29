@@ -20,8 +20,8 @@ excludeInAbsenceSelection = c("Andrena") # any pollinator name that contains any
 # Directories
 observDir  = "C:/Users/angel.gimenez/Documents/REPOSITORIES/OBservData/Datasets_storage" 
 sdmDir     = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/"
-speciesDir = paste(gsub(" ","_",species), "/", sep="")
-dataDir    = paste(sdmDir, speciesDir, sep="");  
+speciesDir = paste0(gsub(" ","_",species), "/")
+dataDir    = paste0(sdmDir, speciesDir);  
 dir.create(file.path(sdmDir, speciesDir), showWarnings = FALSE)
                    
 # Other settings
@@ -30,21 +30,21 @@ csvObservInsect = "observInsectData.csv"
 csvObservField  = "observFieldData.csv"
 csvLocations    = "locations.csv"
 csvCleanLoc     = "locationsCleaned.csv"
-csvEnvVariables = "environmentalVariables.csv"
-gbifReady    = TRUE
-observReady  = TRUE
-locatReady   = TRUE
-cleanReady   = FALSE
-envVarReady  = FALSE
-timeSpan     = paste("year=",stringr::str_c(yrFrom), sep="") %>% paste(",", sep="") %>% paste(stringr::str_c(yrTo), sep="")
-
+csvFeatures     = "features.csv"
+gbifReady       = TRUE
+observReady     = TRUE
+locatReady      = TRUE
+cleanReady      = FALSE
+featuresReady   = FALSE
+timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
+coords_digits   = 4
 
 ###############################
 # 1. Join GBIF and OBServ data to get a table of locations with presence and pseudo-absence data
 
 # Load GBIF data: presence-only
 if (gbifReady) {
-  dfGbif = read.csv(file = paste(dataDir,csvGbif, sep=""), header = TRUE)
+  dfGbif = read.csv(file = paste0(dataDir,csvGbif), header = TRUE)
 } else {
   # Download and save GBIF data
   pars = c(timeSpan)  # use dismo syntax for query
@@ -52,13 +52,13 @@ if (gbifReady) {
   genus = splitted[[1]][1]
   sp = splitted[[1]][2]
   dfGbif = gbif(genus, sp, args=pars, geo=TRUE)
-  write.csv(dfGbif, paste(dataDir, csvGbif, sep=""), row.names=FALSE)
+  write.csv(dfGbif, paste0(dataDir, csvGbif), row.names=FALSE)
 }
 
 # Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
 if (observReady) {
-  dfInsectSampling = read.csv(file = paste(dataDir, csvObservInsect, sep=""), header = TRUE)
-  dfFieldData      = read.csv(file = paste(dataDir, csvObservField, sep=""), header = TRUE)
+  dfInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
+  dfFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)
 } else {
   observFiles = list.files(observDir, full.names = TRUE)
   
@@ -70,7 +70,7 @@ if (observReady) {
   dfInsectSampling  = dfInsectSampling[, names(dfInsectSampling) %in% c("study_id", "site_id", "pollinator","abundance")]
   dfInsectSampling  = dfInsectSampling[complete.cases(dfInsectSampling),]
   names(dfInsectSampling)[names(dfInsectSampling) == "abundance"] <- "abundance_species"
-  write.csv(dfInsectSampling, paste(dataDir, csvObservInsect, sep=""), row.names=FALSE)
+  write.csv(dfInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
 
   # Field data
   indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
@@ -81,12 +81,12 @@ if (observReady) {
   dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "abundance", "sampling_year")]
   dfFieldData  = dfFieldData[complete.cases(dfFieldData),]
   names(dfFieldData)[names(dfFieldData) == "abundance"] <- "abundance_total"
-  write.csv(dfFieldData, paste(dataDir, csvObservField, sep=""), row.names=FALSE)
+  write.csv(dfFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
 }
 
 # Bind presence and pseudo-absence data
 if (locatReady) {
-  dfLocations = read.csv(file = paste(dataDir,csvLocations, sep=""), header = TRUE)
+  dfLocations = read.csv(file = paste0(dataDir,csvLocations), header = TRUE)
 } else {
   
   ###########
@@ -105,10 +105,6 @@ if (locatReady) {
   dfPresence       = plyr::rbind.fill(dfObservPresence, dfGbifPresence)
   dfPresence["presence"]    = rep(1, nrow(dfPresence))
   dfPresence["pollinator"]  = rep(species, nrow(dfPresence)) # other_names -> species name
-  
-  # Remove NA and duplicated locations
-  dfPresence = dfPresence[!is.na(dfPresence$lat) & !is.na(dfPresence$lon),]
-  dfPresence = dfPresence[!duplicated(dfPresence[c("lon","lat")]),]
   
   ###########
   # Pseudo-absence data: column "presence" == 0
@@ -147,7 +143,14 @@ if (locatReady) {
   # Bind presence and pseudo-absence locations
   selectedCols = c("presence","pollinator","lon","lat","sampling_year")
   dfLocations = rbind(dfPresence[selectedCols], dfAbsence[selectedCols])
-  write.csv(dfLocations, paste(dataDir, csvLocations, sep=""), row.names=FALSE)
+  
+  # Remove NA and duplicated locations
+  dfLocations = dfLocations[!is.na(dfLocations$lat) & !is.na(dfLocations$lon),]
+  dfLocations$round_lon = round(dfLocations$lon, digits=coords_digits)
+  dfLocations$round_lat = round(dfLocations$lat, digits=coords_digits)
+  dfLocations = dfLocations[!duplicated(dfLocations[c("round_lon","round_lat")]),]
+  dfLocations = dfLocations[selectedCols]
+  write.csv(dfLocations, paste0(dataDir, csvLocations), row.names=FALSE)
 }
 
 # # Plot
@@ -164,7 +167,7 @@ if (locatReady) {
 ###############################
 # 2. Clean data (CoordinateCleaner)
 if (cleanReady) {
-  dfLocations = read.csv(file = paste(dataDir, csvCleanLoc, sep=""), header = TRUE)
+  dfLocations = read.csv(file = paste0(dataDir, csvCleanLoc), header = TRUE)
 } else {
   rownames(dfLocations)<-1:nrow(dfLocations)
   test <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
@@ -177,7 +180,7 @@ if (cleanReady) {
                                       "outliers",
                                       "zeros"))
   dfLocations = dfLocations[test$.summary,]
-  write.csv(dfLocations, paste(dataDir, csvCleanLoc, sep=""), row.names=FALSE)
+  write.csv(dfLocations, paste0(dataDir, csvCleanLoc), row.names=FALSE)
 }
 
 # 3. Sampling bias. Take absence points as locations in the OBServ datasets 
@@ -226,19 +229,43 @@ if (cleanReady) {
 # ...
 # VER Bioclimatic Predictors from WorldClim:
 #   https://worldclim.org/data/bioclim.html
-if (envVarReady) {
-  dfEnvVars = read.csv(file = paste(dataDir, csvEnvVariables, sep=""), header = TRUE)
+if (featuresReady) {
+  dfFeatures = read.csv(file = paste0(dataDir, csvFeatures), header = TRUE)
 } else {
-  # Go to GEE to download the environmental variables 
-  # TODO: FALTAN SOIL-> CONTENT SAND, SILT, ETC; LABEL EVAPOTRANSPIRATION; ECOREGIONS?; AIR QUALITY? 
+  featFiles = list.files(paste0(dataDir,"features"), full.names = TRUE);
+  featNames = tools::file_path_sans_ext(list.files(paste0(dataDir,"features"), full.names = FALSE));
+  for (i in seq(featFiles)) {
+    dfFeature = read.csv(file = featFiles[i], header = TRUE)
+    
+    # Round coordinates to the specified level of precision
+    dfFeature$longitude = round(dfFeature$longitude, digits=coords_digits)
+    dfFeature$latitude = round(dfFeature$latitude, digits=coords_digits)
+    
+    # Drop not useful columns (inherited from the export in GEE)
+    dfFeature = dfFeature %>% select(-c("system.index", ".geo"))
+    
+    # Remove duplicated locations 
+    dfFeature = dfFeature[!duplicated(dfFeature[c("longitude","latitude")]),]
+
+    # Rename feature column
+    names
+    names(dfFeature)[! names(dfFeature) %in% c("longitude","latitude","sampling_year")] <- featNames[i] 
+        
+    # Left join
+    if (i==1) dfFeatures = dfFeature else dfFeatures = merge(dfFeature, dfFeatures, all.x = TRUE)
+  }
   
+  # TODO: HACER LA PARTE DE PORCENTAJES LANDCOVER. COLUMNA HISTOGRAM, PARSE TO DICTIONARY, CONVERTIR A LOS 15 LC TYPES GENERALES (TOMAR
+  # PRIMEROS DOS DÍGITOS), Y CREAR UN FEATURE POR CADA UNO DE ELLOS
+  
+  write.csv(dfFeatures, paste0(dataDir, csvFeatures), row.names=FALSE)
 }
 
 
 
-# 5. PCA of the environmental variables
+# 5. PCA of the environmental variables (skip for the moment, try with all)
 
-# 6. Apply model: maxent or logistic regression (or both and compare)
+# 6. Apply model: maxent or logistic regression (or both and compare). Consider normalizing continuous variables. 
 
 # 7. Derive landscape suitability from values given by the applied model
 
