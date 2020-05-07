@@ -1,12 +1,8 @@
 
 ###############
 rm(list=ls())
-library(dismo)
-library(dplyr)
-library(CoordinateCleaner)
+source("lib/dataFunctions.R")
 library(maptools)
-library(rgeos)
-library(sp)
 
 ###############################
 # Main settings
@@ -14,8 +10,8 @@ species = "Andrena flavipes"
 otherNames = c("Andrena.flavipes","Andrena_flavipes","Andrena_ flavipes")  # other names of the species in the OBServ database
 yrFrom  = 1989
 yrTo    = 2020
-excludeInAbsenceSelection = c("Andrena") # any pollinator name that contains any of these strings is not considered as a candidate absence point
-# excludeInAbsenceSelection = c("Andrena", "Andrena sp", "Andrena sp.", "Andrena sp. ", "Andrena sp. 4", "Andreninae", "Small Andrena sp.", "Large Andrena sp.") # any pollinator name equal to these strings is not considered as a candidate absence point
+#excludeInAbsenceSelection = c("Andrena") # any pollinator name that contains any of these strings is not considered as a candidate absence point
+excludeInAbsenceSelection = c("Andrena", "Andrena sp", "Andrena sp.", "Andrena sp. ", "Andrena sp. 4", "Andreninae", "Small Andrena sp.", "Large Andrena sp.") # any pollinator name equal to these strings is not considered as a candidate absence point
 
 # Directories
 observDir  = "C:/Users/angel.gimenez/Documents/REPOSITORIES/OBservData/Datasets_storage" 
@@ -23,7 +19,9 @@ sdmDir     = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/"
 speciesDir = paste0(gsub(" ","_",species), "/")
 dataDir    = paste0(sdmDir, speciesDir);  
 dir.create(file.path(sdmDir, speciesDir), showWarnings = FALSE)
-                   
+featDir    = paste0(dataDir, "features/");
+histoDir   = paste0(dataDir, "histograms/");
+
 # Other settings
 csvGbif         = "gbifData.csv"
 csvObservInsect = "observInsectData.csv"
@@ -32,12 +30,13 @@ csvLocations    = "locations.csv"
 csvCleanLoc     = "locationsCleaned.csv"
 csvFeatures     = "features.csv"
 gbifReady       = TRUE
-observReady     = TRUE
-locatReady      = TRUE
+observReady     = FALSE
+locatReady      = FALSE
 cleanReady      = FALSE
 featuresReady   = FALSE
 timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
 coords_digits   = 4
+removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
 
 ###############################
 # 1. Join GBIF and OBServ data to get a table of locations with presence and pseudo-absence data
@@ -47,11 +46,7 @@ if (gbifReady) {
   dfGbif = read.csv(file = paste0(dataDir,csvGbif), header = TRUE)
 } else {
   # Download and save GBIF data
-  pars = c(timeSpan)  # use dismo syntax for query
-  splitted = strsplit(species, " ")
-  genus = splitted[[1]][1]
-  sp = splitted[[1]][2]
-  dfGbif = gbif(genus, sp, args=pars, geo=TRUE)
+  dfGbif = downloadGbifData(species, timeSpan)
   write.csv(dfGbif, paste0(dataDir, csvGbif), row.names=FALSE)
 }
 
@@ -60,27 +55,12 @@ if (observReady) {
   dfInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
   dfFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)
 } else {
-  observFiles = list.files(observDir, full.names = TRUE)
-  
   # Insect sampling
-  indInsectSampling = lapply(observFiles, function(x){grepl("insect_sampling",x)})
-  indInsectSampling = unlist(indInsectSampling)
-  fsInsectSampling  = observFiles[indInsectSampling]
-  dfInsectSampling  = do.call(rbind, lapply(fsInsectSampling, function(file){ read.csv(file = file, header = TRUE) }))
-  dfInsectSampling  = dfInsectSampling[, names(dfInsectSampling) %in% c("study_id", "site_id", "pollinator","abundance")]
-  dfInsectSampling  = dfInsectSampling[complete.cases(dfInsectSampling),]
-  names(dfInsectSampling)[names(dfInsectSampling) == "abundance"] <- "abundance_species"
+  dfInsectSampling = getOBServInsectSampling(observDir)
   write.csv(dfInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
 
   # Field data
-  indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
-  indFieldData = unlist(indFieldData)
-  fsFieldData  = observFiles[indFieldData]
-  dfFieldData  = do.call(rbind, lapply(fsFieldData, function(file){ read.csv(file = file, header = TRUE) }))
-  dfFieldData  = dfFieldData[dfFieldData$sampling_year >= yrFrom & dfFieldData$sampling_year <= yrTo ,]
-  dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "abundance", "sampling_year")]
-  dfFieldData  = dfFieldData[complete.cases(dfFieldData),]
-  names(dfFieldData)[names(dfFieldData) == "abundance"] <- "abundance_total"
+  dfFieldData = getOBServFieldData(observDir)
   write.csv(dfFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
 }
 
@@ -88,68 +68,18 @@ if (observReady) {
 if (locatReady) {
   dfLocations = read.csv(file = paste0(dataDir,csvLocations), header = TRUE)
 } else {
-  
-  ###########
   # Presence data: column "presence" == 1
-  # Select subset data from OBServ and GBIF data
-  dfInsectPresence = dfInsectSampling[dfInsectSampling$pollinator %in% c(species, otherNames) ,]
-  dfObservPresence = merge(dfInsectPresence, dfFieldData, by=c("study_id", "site_id"))
-  dfGbifPresence   = dfGbif[c("lat","lon","year")]
+  dfPresence = getPresenceData(species, dfInsectSampling, dfFieldData, dfGbif, otherNames)
   
-  # Manipulate names
-  names(dfObservPresence)[names(dfObservPresence) == "longitude"] <- "lon"
-  names(dfObservPresence)[names(dfObservPresence) == "latitude"]  <- "lat"
-  names(dfGbifPresence)[names(dfGbifPresence) == "year"]  <- "sampling_year"
-
-  # Bind GBIF and OBServ
-  dfPresence       = plyr::rbind.fill(dfObservPresence, dfGbifPresence)
-  dfPresence["presence"]    = rep(1, nrow(dfPresence))
-  dfPresence["pollinator"]  = rep(species, nrow(dfPresence)) # other_names -> species name
-  
-  ###########
   # Pseudo-absence data: column "presence" == 0
-  # Exclude species that show pattern $excludeInAbsenceSelection
-  i <- 1
-  dfToExclude = data.frame(matrix(ncol = length(names(dfInsectSampling)), nrow = 0))
-  for (i in seq(1,length(excludeInAbsenceSelection))) {
-    dfToExclude = rbind(dfToExclude, dfInsectSampling[grepl(excludeInAbsenceSelection[i], dfInsectSampling$pollinator) ,])
-    #dfToExclude = rbind(dfToExclude, dfInsectSampling[excludeInAbsenceSelection[i] == dfInsectSampling$pollinator, ])
-  }
-  dfInsectAbsence = anti_join(dfInsectSampling, dfToExclude)
-  dfInsectAbsence = dfInsectAbsence[dfInsectAbsence$abundance_species > 0,]
-  
-  # Select those locations (study_id, site_id) not present in dfPresence
-  dfInsectAbsence = anti_join(dfInsectAbsence, dfInsectPresence, by=c("study_id", "site_id"))
-  
-  # Join tables by study_id and site_id and save
-  dfAbsence = merge(dfInsectAbsence, dfFieldData, by=c("study_id", "site_id"))
-  names(dfAbsence)[names(dfAbsence) == "longitude"] <- "lon"
-  names(dfAbsence)[names(dfAbsence) == "latitude"]  <- "lat"
-  dfAbsence["presence"]  = rep(0, nrow(dfAbsence))
-  
-  # Take points within the convex hull of the presence points
-  conHull   = convHull(dfPresence[c("lon","lat")])
-  absPoints = SpatialPoints(cbind(dfAbsence$lon, dfAbsence$lat))
-  inConHull = array()
-  for(i in seq(1:length(absPoints))) {
-    inConHull[i] = gContains(conHull@polygons, absPoints[i])
-  }
-  dfAbsence = dfAbsence[inConHull,]
-  
-  # Remove NA and duplicated locations
-  dfAbsence = dfAbsence[!is.na(dfAbsence$lat) & !is.na(dfAbsence$lon),]
-  dfAbsence = dfAbsence[!duplicated(dfAbsence[c("lon","lat")]),]
+  dfAbsence = getAbsenceData(dfPresence, dfInsectSampling, dfFieldData, excludeInAbsenceSelection)
   
   # Bind presence and pseudo-absence locations
   selectedCols = c("presence","pollinator","lon","lat","sampling_year")
   dfLocations = rbind(dfPresence[selectedCols], dfAbsence[selectedCols])
   
   # Remove NA and duplicated locations
-  dfLocations = dfLocations[!is.na(dfLocations$lat) & !is.na(dfLocations$lon),]
-  dfLocations$round_lon = round(dfLocations$lon, digits=coords_digits)
-  dfLocations$round_lat = round(dfLocations$lat, digits=coords_digits)
-  dfLocations = dfLocations[!duplicated(dfLocations[c("round_lon","round_lat")]),]
-  dfLocations = dfLocations[selectedCols]
+  dfLocations = removeNAandDupLocations(dfLocations, "lon", "lat", selectedCols, coords_digits)
   write.csv(dfLocations, paste0(dataDir, csvLocations), row.names=FALSE)
 }
 
@@ -170,16 +100,9 @@ if (cleanReady) {
   dfLocations = read.csv(file = paste0(dataDir, csvCleanLoc), header = TRUE)
 } else {
   rownames(dfLocations)<-1:nrow(dfLocations)
-  test <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
-                            tests = c("capitals", 
-                                      "centroids",
-                                      "equal", 
-                                      "gbif", 
-                                      "institutions", 
-                                      "seas",
-                                      "outliers",
-                                      "zeros"))
-  dfLocations = dfLocations[test$.summary,]
+  clean <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
+                            tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
+  dfLocations = dfLocations[clean$.summary,]
   write.csv(dfLocations, paste0(dataDir, csvCleanLoc), row.names=FALSE)
 }
 
@@ -232,36 +155,94 @@ if (cleanReady) {
 if (featuresReady) {
   dfFeatures = read.csv(file = paste0(dataDir, csvFeatures), header = TRUE)
 } else {
-  featFiles = list.files(paste0(dataDir,"features"), full.names = TRUE);
-  featNames = tools::file_path_sans_ext(list.files(paste0(dataDir,"features"), full.names = FALSE));
-  for (i in seq(featFiles)) {
-    dfFeature = read.csv(file = featFiles[i], header = TRUE)
-    
-    # Round coordinates to the specified level of precision
-    dfFeature$longitude = round(dfFeature$longitude, digits=coords_digits)
-    dfFeature$latitude = round(dfFeature$latitude, digits=coords_digits)
-    
-    # Drop not useful columns (inherited from the export in GEE)
-    dfFeature = dfFeature %>% select(-c("system.index", ".geo"))
-    
-    # Remove duplicated locations 
-    dfFeature = dfFeature[!duplicated(dfFeature[c("longitude","latitude")]),]
+  dfFeatures = getFeatures(featDir, removePatterns)
+  
+  # For data with medium-high resolution, such as CORINE (100m), pixel size is shorter than the typical distance of 
+  # flight of most pollinators. Therefore, it is better to take into account the vicinity of the records' locations.
+  # For CORINE, we do that using histograms where the number of each LC type is registered, within a buffer area
+  # corresponding to the typical distance of flight of the species, using IT span and Greenleaf et al. (2007). Then,
+  # the next code snippet transform those histograms into usable features of percentage of major LC types
+  dfHistos = getHistos(histoDir, removePatterns)
+  
+  # Get features from CORINE histograms
+  dfCORINE = dfHistos %>% select(c("CORINE","longitude","latitude"))
+  dfLCperc = do.call(rbind, apply(dfCORINE, 1, getCorinePercentages))
 
-    # Rename feature column
-    names
-    names(dfFeature)[! names(dfFeature) %in% c("longitude","latitude","sampling_year")] <- featNames[i] 
-        
-    # Left join
-    if (i==1) dfFeatures = dfFeature else dfFeatures = merge(dfFeature, dfFeatures, all.x = TRUE)
-  }
+  # Merge features
+  dfFeatures = merge(dfFeatures, dfLCperc, by=c("longitude","latitude"))
+  dfFeatures = dfFeatures[complete.cases(dfFeatures),]
   
-  # TODO: HACER LA PARTE DE PORCENTAJES LANDCOVER. COLUMNA HISTOGRAM, PARSE TO DICTIONARY, CONVERTIR A LOS 15 LC TYPES GENERALES (TOMAR
-  # PRIMEROS DOS DÍGITOS), Y CREAR UN FEATURE POR CADA UNO DE ELLOS
-  
+  # Add locations
+  names(dfFeatures)[names(dfFeatures) == "longitude"] <- "lon"
+  names(dfFeatures)[names(dfFeatures) == "latitude"]  <- "lat"
+  dfLocations$lon = round(dfLocations$lon, digits=coords_digits)
+  dfLocations$lat = round(dfLocations$lat, digits=coords_digits)
+  dfFeatures = merge(dfLocations, dfFeatures, by=c("lon","lat"))
   write.csv(dfFeatures, paste0(dataDir, csvFeatures), row.names=FALSE)
 }
 
+dfDataModel = dfFeatures %>% select(-c("lon","lat","pollinator","sampling_year")) 
+dfDataModel$presence = as.factor(dfDataModel$presence)
+dfDataModel$b0_soilText = as.factor(dfDataModel$b0_soilText)
+dfDataModel$soil_taxonomy = as.factor(dfDataModel$soil_taxonomy)
+dfDataModel$landforms = as.factor(dfDataModel$landforms)
 
+dfContinuous = dfDataModel %>% select(-c("b0_soilText","b10_soilText","b30_soilText","landforms","soil_taxonomy"))
+dfContinuousNorm <- Normalize(~., data = dfContinuous)
+# Save to .arff to use in WEKA
+write.arff(dfContinuousNorm, file = paste0(dataDir, "continuousDataNorm.arff"))
+write.arff(dfDataModel, file = paste0(dataDir, "fullData.arff"))
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # 
+# GLM
+# Train GLM model
+group <- kfold(dfContinuousNorm, 5)
+train <- dfContinuousNorm[group != 1, ]
+test  <- dfContinuousNorm[group == 1, ]
+formula <- as.formula(paste("presence ~", paste(names(dfContinuousNorm)[-1],collapse="+")))
+model = glm(formula, data = train, family = binomial("logit"), maxit = 100)
+predict <- predict(model, test, type = 'response')
+
+# BayesGLM
+library(arm)
+group <- kfold(dfContinuousNorm, 5)
+train <- dfContinuousNorm[group != 1, ]
+test  <- dfContinuousNorm[group == 1, ]
+formula <- as.formula(paste("presence ~", paste(names(dfContinuousNorm)[-1],collapse="+")))
+model = bayesglm(formula, data = train, family="binomial")
+predict <- predict(model, test, type = 'response')
+
+# confusion matrix
+table_mat <- table(test$presence, predict > 0.8)
+table_mat
+accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+accuracy_Test
+
+precision <- function(matrix) {
+  # True positive
+  tp <- matrix[2, 2]
+  # false positive
+  fp <- matrix[1, 2]
+  return (tp / (tp + fp))
+}
+
+recall <- function(matrix) {
+  # true positive
+  tp <- matrix[2, 2]# false positive
+  fn <- matrix[2, 1]
+  return (tp / (tp + fn))
+}
+
+prec <- precision(table_mat)
+prec
+rec <- recall(table_mat)
+rec
+
+library(ROCR)
+ROCRpred <- prediction(predict, test$presence)
+ROCRperf <- performance(ROCRpred, 'tpr', 'fpr')
+plot(ROCRperf, colorize = TRUE, text.adj = c(-0.2, 1.7))
 
 # 5. PCA of the environmental variables (skip for the moment, try with all)
 
@@ -273,6 +254,13 @@ if (featuresReady) {
  
 # 9. Habitat preferences (https://bartomeuslab.com/2016/05/24/preferring-a-preference-index-ii-null-models/)
 # 
+
+
+
+
+
+
+
 
 
 
