@@ -1,0 +1,13 @@
+library(sf)
+library(raster)
+library(rgdal)
+library(dplyr)
+epsg <- make_EPSG()
+crsWGS84    = epsg %>% filter(code == 4326)
+crsSAD69_24 = epsg %>% filter(code == 5534)
+df = read.csv(file = "C:/Users/angel.gimenez/Documents/Copy of Mango_Passion_Fruit_Blande_David_Bees_Abundance.csv", header = TRUE)
+df = df[1:16,]
+selPoints = SpatialPoints(cbind(df$X,df$Y),proj4string=CRS(crsSAD69_24$prj4))
+projSelPts <- spTransform(selPoints, CRS(crsWGS84$prj4))
+View(projSelPts@coords)
+write.csv(projSelPts@coords, file = "C:/Users/angel.gimenez/Documents/newCoord.csv")

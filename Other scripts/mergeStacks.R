@@ -1,6 +1,7 @@
 library(raster)
 library(rlist)
 root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/rasters/stacksToMerge/"
+dir = "C:/Users/angel.gimenez/Google Drive/GEE outputs"
 subdirs = list.dirs(root, full.names = TRUE)
 
 mergeRasters = function(x, rootDir) {

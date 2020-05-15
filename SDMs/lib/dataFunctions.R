@@ -3,6 +3,7 @@ library(dplyr)
 library(CoordinateCleaner)
 library(rgeos)
 library(sp)
+library(stringr)
 
 downloadGbifData <- function(species, timespan) {
   pars = c(timeSpan)  # use dismo syntax for query
@@ -13,7 +14,7 @@ downloadGbifData <- function(species, timespan) {
 }
 
 getOBServInsectSampling <- function(observDir){
-  observFiles = list.files(observDir, full.names = TRUE)
+  observFiles = list.files(observDir, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
   indInsectSampling = lapply(observFiles, function(x){grepl("insect_sampling",x)})
   indInsectSampling = unlist(indInsectSampling)
   fsInsectSampling  = observFiles[indInsectSampling]
@@ -25,7 +26,7 @@ getOBServInsectSampling <- function(observDir){
 }
 
 getOBServFieldData <- function(observDir){
-  observFiles = list.files(observDir, full.names = TRUE)
+  observFiles = list.files(observDir, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
   indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
   indFieldData = unlist(indFieldData)
   fsFieldData  = observFiles[indFieldData]
@@ -48,6 +49,10 @@ getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, 
   names(dfObservPresence)[names(dfObservPresence) == "latitude"]  <- "lat"
   names(dfGbifPresence)[names(dfGbifPresence) == "year"]  <- "sampling_year"
   
+  # Tag origin of the points 
+  dfGbifPresence$source   = replicate(nrow(dfGbifPresence),"GBIF")
+  dfObservPresence$source = replicate(nrow(dfObservPresence),"OBServ")
+  
   # Bind GBIF and OBServ
   dfPresence  = plyr::rbind.fill(dfObservPresence, dfGbifPresence)
   dfPresence["presence"]    = rep(1, nrow(dfPresence))
@@ -55,13 +60,13 @@ getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, 
   return(dfPresence)
 }
 
-getAbsenceData <- function(dfInsectPresence, dfOBServInsectSampling, dfOBServFieldData, exclude){
+getAbsenceData <- function(dfInsectPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames){
   
   # Exclude species that show pattern $excludeInAbsenceSelection
   dfToExclude = data.frame(matrix(ncol = length(names(dfOBServInsectSampling)), nrow = 0))
-  for (i in seq(1,length(exclude))) {
+  for (i in seq(1,length(excludeNames))) {
     #dfToExclude = rbind(dfToExclude, dfOBServInsectSampling[grepl(exclude[i], dfOBServInsectSampling$pollinator) ,])
-    dfToExclude = rbind(dfToExclude, dfOBServInsectSampling[exclude[i] == dfOBServInsectSampling$pollinator, ])
+    dfToExclude = rbind(dfToExclude, dfOBServInsectSampling[excludeNames[i] == dfOBServInsectSampling$pollinator, ])
   }
   dfInsectAbsence = anti_join(dfOBServInsectSampling, dfToExclude)
   dfInsectAbsence = dfInsectAbsence[dfInsectAbsence$abundance_species > 0,]
@@ -75,12 +80,16 @@ getAbsenceData <- function(dfInsectPresence, dfOBServInsectSampling, dfOBServFie
   names(dfAbsence)[names(dfAbsence) == "latitude"]  <- "lat"
   dfAbsence["presence"]  = rep(0, nrow(dfAbsence))
   
-  # Take points within the convex hull of the presence points
+  # Tag origin of the points 
+  dfAbsence$source = replicate(nrow(dfAbsence),"OBServ")
+  
+  # Take points within the convex hull of the presence points, buffered 1 degree
   conHull   = convHull(dfPresence[c("lon","lat")])
+  conHull   = buffer(polygons(conHull),width=1)
   absPoints = SpatialPoints(cbind(dfAbsence$lon, dfAbsence$lat))
   inConHull = array()
   for(i in seq(1:length(absPoints))) {
-    inConHull[i] = gContains(conHull@polygons, absPoints[i])
+    inConHull[i] = gContains(conHull, absPoints[i])
   }
   dfAbsence = dfAbsence[inConHull,]
   

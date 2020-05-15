@@ -1,6 +1,7 @@
 
 ###############
 rm(list=ls())
+setwd("C:/Users/angel.gimenez/Documents/REPOSITORIES/R/SDMs/")
 source("lib/dataFunctions.R")
 library(maptools)
 library(dplyr)
@@ -13,11 +14,11 @@ species = "Andrena flavipes"
 otherNames = c("Andrena.flavipes","Andrena_flavipes","Andrena_ flavipes")  # other names of the species in the OBServ database
 yrFrom  = 1988
 yrTo    = 2020
-#excludeInAbsenceSelection = c("Andrena") # any pollinator name that contains any of these strings is not considered as a candidate absence point
-excludeInAbsenceSelection = c("Andrena", "Andrena sp", "Andrena sp.", "Andrena sp. ", "Andrena sp. 4", "Andreninae", "Small Andrena sp.", "Large Andrena sp.") # any pollinator name equal to these strings is not considered as a candidate absence point
+#excludeNames = c("Andrena") # any pollinator name that contains any of these strings is not considered as a candidate absence point
+excludeNames = c("Andrena", "Andrena sp", "Andrena sp.", "Andrena sp. ", "Andrena sp. 4", "Andreninae", "Small Andrena sp.", "Large Andrena sp.") # any pollinator name equal to these strings is not considered as a candidate absence point
 
 # Directories
-observDir  = "C:/Users/angel.gimenez/Documents/REPOSITORIES/OBservData/Datasets_storage" 
+observDir  = "C:/Users/angel.gimenez/Documents/REPOSITORIES/OBservData/Datasets_storage"
 sdmDir     = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/"
 speciesDir = paste0(gsub(" ","_",species), "/")
 dataDir    = paste0(sdmDir, speciesDir);  
@@ -32,13 +33,11 @@ csvGbif         = "gbifData.csv"
 csvObservInsect = "observInsectData.csv"
 csvObservField  = "observFieldData.csv"
 csvLocations    = "locations.csv"
-csvCleanLoc     = "locationsCleaned.csv"
 csvFeatures     = "features.csv"
 gbifReady       = TRUE
 observReady     = TRUE
 locatReady      = TRUE
-cleanReady      = TRUE
-featuresReady   = TRUE
+featuresReady   = FALSE
 useRasters      = FALSE
 timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
 coords_digits   = 4
@@ -48,6 +47,7 @@ removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
 
 ###############################
 # 1. Join GBIF and OBServ data to get a table of locations with presence and pseudo-absence data
+# 2. Clean data (CoordinateCleaner)
 # Load GBIF data: presence-only
 if (gbifReady) {
   dfGbif = read.csv(file = paste0(dataDir,csvGbif), header = TRUE)
@@ -59,16 +59,16 @@ if (gbifReady) {
 
 # Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
 if (observReady) {
-  dfInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
-  dfFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)
+  dfOBServInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
+  dfOBServFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)
 } else {
   # Insect sampling
-  dfInsectSampling = getOBServInsectSampling(observDir)
-  write.csv(dfInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
+  dfOBServInsectSampling = getOBServInsectSampling(observDir)
+  write.csv(dfOBServInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
 
   # Field data
-  dfFieldData = getOBServFieldData(observDir)
-  write.csv(dfFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
+  dfOBServFieldData = getOBServFieldData(observDir)
+  write.csv(dfOBServFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
 }
 
 # Bind presence and pseudo-absence data
@@ -76,17 +76,23 @@ if (locatReady) {
   dfLocations = read.csv(file = paste0(dataDir,csvLocations), header = TRUE)
 } else {
   # Presence data: column "presence" == 1
-  dfPresence = getPresenceData(species, dfInsectSampling, dfFieldData, dfGbif, otherNames)
+  dfPresence = getPresenceData(species, dfOBServInsectSampling, dfOBServFieldData, dfGbif, otherNames)
   
   # Pseudo-absence data: column "presence" == 0
-  dfAbsence = getAbsenceData(dfPresence, dfInsectSampling, dfFieldData, excludeInAbsenceSelection)
+  dfAbsence = getAbsenceData(dfPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames)
   
   # Bind presence and pseudo-absence locations
-  selectedCols = c("presence","pollinator","lon","lat","sampling_year")
+  selectedCols = c("presence","pollinator","lon","lat","sampling_year","source")
   dfLocations = rbind(dfPresence[selectedCols], dfAbsence[selectedCols])
   
   # Remove NA and duplicated locations
   dfLocations = removeNAandDupLocations(dfLocations, "lon", "lat", selectedCols, coords_digits)
+  
+  # Further cleaning
+  rownames(dfLocations)<-1:nrow(dfLocations)
+  clean <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
+                             tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
+  dfLocations = dfLocations[clean$.summary,]
   write.csv(dfLocations, paste0(dataDir, csvLocations), row.names=FALSE)
 }
 ###############################
@@ -101,20 +107,6 @@ if (locatReady) {
 # points(dfLocations$lon, dfLocations$lat, col='orange', pch=20, cex=0.75)
 # # plot points again to add a border, for better visibility
 # points(dfLocations$lon, dfLocations$lat, col='red', cex=0.75)
-
-
-###############################
-# 2. Clean data (CoordinateCleaner)
-if (cleanReady) {
-  dfLocations = read.csv(file = paste0(dataDir, csvCleanLoc), header = TRUE)
-} else {
-  rownames(dfLocations)<-1:nrow(dfLocations)
-  clean <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
-                            tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
-  dfLocations = dfLocations[clean$.summary,]
-  write.csv(dfLocations, paste0(dataDir, csvCleanLoc), row.names=FALSE)
-}
-###############################
 
 
 ###############################
