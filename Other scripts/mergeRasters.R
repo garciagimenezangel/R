@@ -1,37 +1,36 @@
+rm(list=ls())
 library(raster)
 library(rlist)
 root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/rasters/toMerge/"
-#root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/rasters/Topography/elevation/"
+dir = "C:/Users/angel.gimenez/Google Drive/GEE outputs"
 subdirs = list.dirs(root, full.names = TRUE)
-for (dir in subdirs[2:16]) {
-  files = list.files(dir, full.names = TRUE, pattern = ".tif")
-  x = list()
-  for (i in seq(1,length(files))) {
-    r = raster(files[i])
-    #r = flip(r, direction="y")
-    x = list.append(x, r)
-    print(paste("File checked:",files[i]))
-  }
-  filename = paste0(dir,".tif")
+
+mergeRasters = function(x, rootDir) {
+  name = x[[1]]@data@names
+  print(paste("Name:", name))
+  filename = paste0(rootDir, name, ".tif")
   x$filename <- filename
   x$overwrite <- TRUE
   m <- do.call(raster::merge, x)
-  print(paste("Files merged in dir:",dir))
+  print(paste("File merged:",filename))
 }
 
 # One by one:
 i=2
 dir = subdirs[i]
 files = list.files(dir, full.names = TRUE, pattern = ".tif")
-x = list()
+x = list(list())
 for (i in seq(1,length(files))) {
-  r = raster(files[i])
-  #r = flip(r, direction="y")
-  x = list.append(x, r)
+  s = stack(files[i])
+  for (j in seq(1, length(s@layers))) {
+    if (length(x) < j) {
+      x[[j]] = list(s@layers[[j]])
+    } else {
+      x[[j]] = list.append(x[[j]], s@layers[[j]])  
+    }
+  }
   print(paste("File checked:",files[i]))
 }
-filename = paste0(dir,".tif")
-x$filename <- filename
-x$overwrite <- TRUE
-m <- do.call(raster::merge, x)
-print(paste("Files merged in dir:",dir))
+lapply(x, mergeRasters, rootDir=root)
+
+

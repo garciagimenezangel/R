@@ -7,6 +7,7 @@ library(maptools)
 library(dplyr)
 library(raster)
 library(RWeka)
+library(rlist)
 
 ###############################
 # Main settings
@@ -26,7 +27,6 @@ dir.create(file.path(sdmDir, speciesDir), showWarnings = FALSE)
 featDir    = paste0(dataDir, "features/");
 histoDir   = paste0(dataDir, "histograms/");
 rastersDir = paste0(sdmDir, "rasters/");
-refRastDir = paste0(rastersDir, "reference rasters/");
 
 # Other settings
 csvGbif         = "gbifData.csv"
@@ -115,35 +115,26 @@ if (locatReady) {
 # Growing days, Habitat complexity, Distance to semi-natural habitat: ver definición de SNH en http://www.fao.org/3/x0596e/x0596e01f.htm,
 # Intensity of agriculture... (alguna métrica explícita), Parámetro cantidad de bordes en parches de SNH (más luz, mejores en teoría), RESOLVE Ecoregions 2017,
 # Sentinel-5P OFFL NO2: Offline Nitrogen Dioxide? As a proxy of anthropogenic activities...(search tag pollution GEE->aerosols, CO,..) (ref: https://www.unenvironment.org/news-and-stories/story/celebrating-greatest-all-pollinators-bees)
+# For data with medium-high resolution, such as CORINE (100m), pixel size is shorter than the typical distance of flight of most pollinators. Therefore, it is better to take into account the vicinity of the records' locations. For CORINE, we do that using histograms where the number of each LC type is registered, within a buffer area corresponding to the typical distance of flight of the species, using IT span and Greenleaf et al. (2007). Then, transform those histograms into usable features of percentage of major LC types
 
 # 2 possibilities: 
-# i)  get data from rasters in the study region (large portion of Europe), exported in GEE 
-# ii) get data extracted at the locations with GEE, stored in the folders 'features' and 'histograms' (dfFeatures)
+# i)  get data from ALIGNED rasters (same dimensions and resolution) in th ROI, exported in GEE 
+# ii) get data extracted at the locations with GEE, stored in the folders 'features' and 'histograms'
 if (useRasters) {
-  # 3.1) RASTER STACK
-  # Make a stack of rasters, which must be prepared in advanced.
-  #   - GEE gives tiles that must be merged->(otherScripts/mergeRasters.R)
-  #   - Rasters must be resampled to the same extent and resolution
-  fsRasters = list.files(rastersDir, full.names = TRUE, pattern = ".tif", recursive = FALSE)
-  fsRefRast = list.files(refRastDir, full.names = TRUE, pattern = ".tif", recursive = FALSE)
+  fsRastersCommon = list.files(paste0(rastersDir,"common_aligned"), full.names = TRUE, pattern = ".tif", recursive = FALSE)
+  fsRastersAndrenaFlavipes = list.files(paste0(rastersDir,"Andrena flavipes"), full.names = TRUE, pattern = ".tif", recursive = FALSE)
+  fsRasters = list.append(fsRastersAndrenaFlavipes, fsRastersCommon)
   rasters = lapply(fsRasters, function(x){raster(x)})
-  refRast = lapply(fsRefRast, function(x){raster(x)})
-  rasters = lapply(rasters, function(x) { projectRaster(x, refRast[[1]], method='bilinear', alignOnly = TRUE) })
-  rasters = list.append(refRast, rasters)
-  rStack  = stack(rasters)
+  predictors  = stack(rasters)
+  
   
 } else {
   # 3.2) FEATURES
   if (featuresReady) {
     dfFeatures = read.csv(file = paste0(dataDir, csvFeatures), header = TRUE)
   } else {
+    # Get features and histograms from csv's created in GEE
     dfFeatures = getFeatures(featDir, removePatterns)
-    
-    # For data with medium-high resolution, such as CORINE (100m), pixel size is shorter than the typical distance of 
-    # flight of most pollinators. Therefore, it is better to take into account the vicinity of the records' locations.
-    # For CORINE, we do that using histograms where the number of each LC type is registered, within a buffer area
-    # corresponding to the typical distance of flight of the species, using IT span and Greenleaf et al. (2007). Then,
-    # the next code snippet transform those histograms into usable features of percentage of major LC types
     dfHistos = getHistos(histoDir, removePatterns)
     
     # Get features from CORINE histograms
@@ -166,7 +157,7 @@ if (useRasters) {
 }
 
 # Save data to arff files
-dfDataModel = dfFeatures %>% select(-c("lon","lat","pollinator","sampling_year")) 
+dfDataModel = dfFeatures %>% select(-c("lon","lat","pollinator","sampling_year","source")) 
 dfDataModel$presence = as.factor(dfDataModel$presence)
 dfDataModel$b0_soilText = as.factor(dfDataModel$b0_soilText)
 dfDataModel$b10_soilText = as.factor(dfDataModel$b10_soilText)
@@ -182,7 +173,18 @@ write.arff(dfContinuousNorm, file = paste0(dataDir, "continuousDataNorm.arff"))
 write.arff(dfDataModel, file = paste0(dataDir, "fullData.arff"))
 ###############################
 
-
+# Test prediction with logistic model
+pres = dfFeatures[dfFeatures$presence == 1,c("lon","lat")]
+abs  = dfFeatures[dfFeatures$presence == 0,c("lon","lat")]
+presvals <- extract(predictors, pres)
+absvals  <- extract(predictors, abs)
+pb <- c(rep(1, nrow(presvals)), rep(0, nrow(absvals)))
+sdmdata <- data.frame(cbind(pb, rbind(presvals, absvals)))
+sdmdataNorm <- Normalize(~., data = sdmdata) # RWeka normalization, range [0,1]
+formula <- as.formula(paste("pb ~", paste(names(sdmdataNorm)[-1],collapse="+")))
+model = glm(formula, data = sdmdataNorm, family = binomial("logit"), maxit = 100)  
+p <- predict(predictors, model)
+plot(p)
 
 ###############################
 # (skip, for now, PCA or any other selection of the environmental variables)
