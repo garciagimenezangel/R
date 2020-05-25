@@ -170,6 +170,7 @@ write.arff(dfDataModel, file = paste0(dataDir, "fullData.arff"))
 ###############################
 
 # Test prediction with logistic model
+library(randomForest)
 pres = dfFeatures[dfFeatures$presence == 1,c("lon","lat")]
 abs  = dfFeatures[dfFeatures$presence == 0,c("lon","lat")]
 presvals <- extract(predictors, pres)
@@ -179,6 +180,7 @@ sdmdata <- data.frame(cbind(pb, rbind(presvals, absvals)))
 sdmdataNorm <- Normalize(~., data = sdmdata) # RWeka normalization, range [0,1]
 formula <- as.formula(paste("pb ~", paste(names(sdmdataNorm)[-1],collapse="+")))
 model = glm(formula, data = sdmdataNorm, family = binomial("logit"), maxit = 100)  
+model = randomForest(formula, data = sdmdataNorm)  
 p <- predict(predictors, model)
 plot(p)
 
