@@ -24,6 +24,12 @@
 
 GetValues_KLabModels <- function() {
   
+  # Get datasets
+  observFiles = list.files(field_data_folder, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
+  indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
+  indFieldData = unlist(indFieldData)
+  fsFieldData  = observFiles[indFieldData]
+  
   # Set criteria (using reg expr) acceptable to be considered as a model output
   ext_valid   = ".(tiff|tif)$"
   reg_defined = ".region"
@@ -54,11 +60,11 @@ GetValues_KLabModels <- function() {
   names(df_out) = col_names
   
   # Loop datasets
-  for (ds in datasets) {
+  for (fFieldData in fsFieldData) {
     
     # Read dataset and define temporary dataframe, where we will store the extracted geodata 
     # at the points of this dataset 
-    df = read.csv(file= paste(field_data_folder, ds, sep = ""), header=T);
+    df = read.csv(file= fFieldData, header=T);
     df_temp = df[base_col_names]
     
     # Coordinates to extract model data

@@ -2,6 +2,7 @@ library(raster)
 library(rgdal)
 library(dplyr)
 library(stringr)
+source('../SDMs/lib/dataFunctions.R')
 
 ######################################################
 # Clean session
@@ -18,9 +19,14 @@ source("config.R")
 # kLAB
 source("GetValues_KLabModels.R");
 df_klab = GetValues_KLabModels();
+df_klab = clean(df_klab, lon="longitude", lat="latitude", species="")
+df_klab = df_klab[complete.cases(df_klab),]
+
 # GEE
 source("GetValues_GEEModels.R");
 df_gee = GetValues_GEEModels();
+df_gee = clean(df_gee, lon="longitude", lat="latitude", species="")
+df_gee = df_gee[complete.cases(df_gee),]
 
 # Merge results from different sources
 df_final = merge(df_klab, df_gee, by = base_col_names)

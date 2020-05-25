@@ -40,7 +40,8 @@ locatReady      = TRUE
 featuresReady   = FALSE
 useRasters      = FALSE
 timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
-coords_digits   = 4
+coordsDigits    = 4
+minCoordDig     = 3
 removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
 ###############################
 
@@ -67,7 +68,8 @@ if (observReady) {
   write.csv(dfOBServInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
 
   # Field data
-  dfOBServFieldData = getOBServFieldData(observDir)
+  dfOBServFieldData = getOBServFieldData(observDir, yrFrom, yrTo)
+  dfOBServFieldData = clean(dfOBServFieldData, minCoordDig, lon="longitude", lat="latitude", species="")
   write.csv(dfOBServFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
 }
 
@@ -85,14 +87,8 @@ if (locatReady) {
   selectedCols = c("presence","pollinator","lon","lat","sampling_year","source")
   dfLocations = rbind(dfPresence[selectedCols], dfAbsence[selectedCols])
   
-  # Remove NA and duplicated locations
-  dfLocations = removeNAandDupLocations(dfLocations, "lon", "lat", selectedCols, coords_digits)
-  
   # Further cleaning
-  rownames(dfLocations)<-1:nrow(dfLocations)
-  clean <- clean_coordinates(x = dfLocations, lon = "lon", lat = "lat", species="pollinator",
-                             tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
-  dfLocations = dfLocations[clean$.summary,]
+  dfLocations = clean(dfLocations, minCoordDig)
   write.csv(dfLocations, paste0(dataDir, csvLocations), row.names=FALSE)
 }
 ###############################
@@ -148,8 +144,8 @@ if (useRasters) {
     # Add locations
     names(dfFeatures)[names(dfFeatures) == "longitude"] <- "lon"
     names(dfFeatures)[names(dfFeatures) == "latitude"]  <- "lat"
-    dfLocations$lon = round(dfLocations$lon, digits=coords_digits)
-    dfLocations$lat = round(dfLocations$lat, digits=coords_digits)
+    dfLocations$lon = round(dfLocations$lon, digits=coordsDigits)
+    dfLocations$lat = round(dfLocations$lat, digits=coordsDigits)
     dfFeatures = merge(dfLocations, dfFeatures, by=c("lon","lat"))
     write.csv(dfFeatures, paste0(dataDir, csvFeatures), row.names=FALSE)
   }

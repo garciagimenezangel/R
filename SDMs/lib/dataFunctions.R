@@ -25,16 +25,15 @@ getOBServInsectSampling <- function(observDir){
   return(dfInsectSampling)
 }
 
-getOBServFieldData <- function(observDir){
+getOBServFieldData <- function(observDir, yrFrom, yrTo){
   observFiles = list.files(observDir, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
   indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
   indFieldData = unlist(indFieldData)
   fsFieldData  = observFiles[indFieldData]
   dfFieldData  = do.call(rbind, lapply(fsFieldData, function(file){ read.csv(file = file, header = TRUE) }))
   dfFieldData  = dfFieldData[dfFieldData$sampling_year >= yrFrom & dfFieldData$sampling_year <= yrTo ,]
-  dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "abundance", "sampling_year")]
+  dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "sampling_year")]
   dfFieldData  = dfFieldData[complete.cases(dfFieldData),]
-  names(dfFieldData)[names(dfFieldData) == "abundance"] <- "abundance_total"
   return(dfFieldData)
 }
 
@@ -60,7 +59,7 @@ getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, 
   return(dfPresence)
 }
 
-getAbsenceData <- function(dfInsectPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames){
+getAbsenceData <- function(dfPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames){
   
   # Exclude species that show pattern $excludeInAbsenceSelection
   dfToExclude = data.frame(matrix(ncol = length(names(dfOBServInsectSampling)), nrow = 0))
@@ -72,7 +71,7 @@ getAbsenceData <- function(dfInsectPresence, dfOBServInsectSampling, dfOBServFie
   dfInsectAbsence = dfInsectAbsence[dfInsectAbsence$abundance_species > 0,]
   
   # Select those locations (study_id, site_id) not present in dfPresence
-  dfInsectAbsence = anti_join(dfInsectAbsence, dfInsectPresence, by=c("study_id", "site_id"))
+  dfInsectAbsence = anti_join(dfInsectAbsence, dfPresence, by=c("study_id", "site_id"))
   
   # Join tables by study_id and site_id and save
   dfAbsence = merge(dfInsectAbsence, dfOBServFieldData, by=c("study_id", "site_id"))
@@ -216,14 +215,37 @@ getCorinePercentages <- function(x, coords_digits=4) {
   return(df)
 }
 
-removeNAandDupLocations <- function(df, lon, lat, selectedCols, coords_digits = 4) {
+removeNAandDupLocations <- function(df, lon, lat, coords_digits = 4) {
   df = df[!is.na(df$lat) & !is.na(df$lon),]
   df$round_lon = round(df$lon, digits=coords_digits)
   df$round_lat = round(df$lat, digits=coords_digits)
   df = df[!duplicated(df[c("round_lon","round_lat")]),]
-  df = df[selectedCols]
+  df = df %>% select(-c("round_lon","round_lat"))
   return(df)
 }
 
+decimalplaces <- function(x) {
+  decimal = x - floor(x)
+  nDecimal = nchar(decimal) - 2
+  nDecimal <- if(nDecimal > 0) nDecimal else 0
+  return(nDecimal)
+}
 
-
+clean <- function(df, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
+  # Remove NA and duplicated locations
+  df = removeNAandDupLocations(df, "lon", "lat", coords_digits)
+  # Use cleanCoordinates package
+  rownames(df)<-1:nrow(df)
+  if (species == "") {
+    df["species"] = rep("mockSpecies",nrow(df))
+    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = "species", tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "zeros"))
+    df = df %>% select(-c("species"))
+  } else {
+    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = species, tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
+  }
+  df = df[cleancoord$.summary,]
+  # Rule out coordinates that have less than 3 decimal digits
+  indDecimGe3 = ( decimalplaces(df[lon]) >= minDec ) && ( decimalplaces(df[lat]) >= minDec )
+  df = df[indDecimGe3,]
+  return(df)
+}
