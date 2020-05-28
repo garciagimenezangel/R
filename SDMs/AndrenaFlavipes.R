@@ -35,8 +35,8 @@ csvObservField  = "observFieldData.csv"
 csvLocations    = "locations.csv"
 csvFeatures     = "features.csv"
 gbifReady       = TRUE
-observReady     = TRUE
-locatReady      = TRUE
+observReady     = FALSE
+locatReady      = FALSE
 featuresReady   = FALSE
 useRasters      = FALSE
 timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
@@ -68,8 +68,11 @@ if (observReady) {
   write.csv(dfOBServInsectSampling, paste0(dataDir, csvObservInsect), row.names=FALSE)
 
   # Field data
-  dfOBServFieldData = getOBServFieldData(observDir, yrFrom, yrTo)
-  dfOBServFieldData = clean(dfOBServFieldData, minCoordDig, lon="longitude", lat="latitude", species="")
+  dfOBServFieldData = getOBServFieldData(observDir)
+  # Some site_id's = NA. Replace by ""
+  df$site_id = as.character(df$site_id)
+  df$site_id[is.na(df$site_id)] = "noID"
+  dfOBServFieldData = clean(dfOBServFieldData, yrFrom, yrTo, minCoordDig, lon="longitude", lat="latitude", species="")
   write.csv(dfOBServFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
 }
 
@@ -88,7 +91,7 @@ if (locatReady) {
   dfLocations = rbind(dfPresence[selectedCols], dfAbsence[selectedCols])
   
   # Further cleaning
-  dfLocations = clean(dfLocations, minCoordDig)
+  dfLocations = clean(dfLocations, yrFrom, yrTo, minCoordDig)
   write.csv(dfLocations, paste0(dataDir, csvLocations), row.names=FALSE)
 }
 ###############################

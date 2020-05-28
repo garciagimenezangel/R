@@ -20,20 +20,17 @@ getOBServInsectSampling <- function(observDir){
   fsInsectSampling  = observFiles[indInsectSampling]
   dfInsectSampling  = do.call(rbind, lapply(fsInsectSampling, function(file){ read.csv(file = file, header = TRUE) }))
   dfInsectSampling  = dfInsectSampling[, names(dfInsectSampling) %in% c("study_id", "site_id", "pollinator","abundance")]
-  dfInsectSampling  = dfInsectSampling[complete.cases(dfInsectSampling),]
   names(dfInsectSampling)[names(dfInsectSampling) == "abundance"] <- "abundance_species"
   return(dfInsectSampling)
 }
 
-getOBServFieldData <- function(observDir, yrFrom, yrTo){
+getOBServFieldData <- function(observDir){
   observFiles = list.files(observDir, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
   indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
   indFieldData = unlist(indFieldData)
   fsFieldData  = observFiles[indFieldData]
   dfFieldData  = do.call(rbind, lapply(fsFieldData, function(file){ read.csv(file = file, header = TRUE) }))
-  dfFieldData  = dfFieldData[dfFieldData$sampling_year >= yrFrom & dfFieldData$sampling_year <= yrTo ,]
   dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "sampling_year")]
-  dfFieldData  = dfFieldData[complete.cases(dfFieldData),]
   return(dfFieldData)
 }
 
@@ -231,17 +228,24 @@ decimalplaces <- function(x) {
   return(nDecimal)
 }
 
-clean <- function(df, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
-  # Remove NA and duplicated locations
+cleanSamplingYear <- function(df, yrFrom, yrTo) {
+  df$sampling_year = as.numeric(substr(df$sampling_year, 1, 4)) # get only the first 4 characters (remove entries like 2001-2002, 2001/2000, etc)
+  return(df[df$sampling_year >= yrFrom & df$sampling_year <= yrTo,])
+}
+
+clean <- function(df, yrFrom, yrTo, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
+  df = cleanSamplingYear(df, yrFrom, yrTo)
   df = removeNAandDupLocations(df, "lon", "lat", coords_digits)
   # Use cleanCoordinates package
   rownames(df)<-1:nrow(df)
   if (species == "") {
     df["species"] = rep("mockSpecies",nrow(df))
-    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = "species", tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "zeros"))
+    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = "species", 
+                                    tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "zeros"))
     df = df %>% select(-c("species"))
   } else {
-    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = species, tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
+    cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = species, 
+                                    tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))
   }
   df = df[cleancoord$.summary,]
   # Rule out coordinates that have less than 3 decimal digits
