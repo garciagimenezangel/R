@@ -2,7 +2,7 @@ library(raster)
 library(rgdal)
 library(dplyr)
 library(stringr)
-source('../SDMs/lib/dataFunctions.R')
+library(rlist)
 
 ######################################################
 # Clean session
@@ -14,22 +14,22 @@ setwd(work_dir);
 
 # Configuration file
 source("config.R")
+source('../SDMs/lib/dataFunctions.R')
 
 # Extract model data 
 # kLAB
-source("GetValues_KLabModels.R");
-df_klab = GetValues_KLabModels();
-df_klab = clean(df_klab, lon="longitude", lat="latitude", species="")
-df_klab = df_klab[complete.cases(df_klab),]
+#source("GetValues_KLabModels.R");
+#df_klab = GetValues_KLabModels();
+#df_klab = clean(df_klab, lon="longitude", lat="latitude", species="")
 
 # GEE
 source("GetValues_GEEModels.R");
 df_gee = GetValues_GEEModels();
 df_gee = clean(df_gee, lon="longitude", lat="latitude", species="")
-df_gee = df_gee[complete.cases(df_gee),]
 
 # Merge results from different sources
-df_final = merge(df_klab, df_gee, by = base_col_names)
+#df_final = merge(df_klab, df_gee, by = base_col_names)
+df_final = df_gee;
 
 # Sort table by the two first columns (they should be "study_id" and "field_id")
 ord = order(df_final[,1], as.numeric(df_final[,2]))

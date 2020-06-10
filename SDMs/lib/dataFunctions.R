@@ -233,7 +233,7 @@ cleanSamplingYear <- function(df, yrFrom, yrTo) {
   return(df[df$sampling_year >= yrFrom & df$sampling_year <= yrTo,])
 }
 
-clean <- function(df, yrFrom, yrTo, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
+clean <- function(df, yrFrom=1800, yrTo=2100, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
   df = cleanSamplingYear(df, yrFrom, yrTo)
   df = removeNAandDupLocations(df, "lon", "lat", coords_digits)
   # Use cleanCoordinates package

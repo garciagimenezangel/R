@@ -1,0 +1,10 @@
+c0 = df_gee$Lonsdorf.gaussKer.dmax500.visit_index_USA
+c1 = df_gee$Lonsdorf.gaussKer.dmax1000.visit_index_USA
+c2 = df_gee$Lonsdorf.gaussKer.dmax3000.visit_index_USA
+cc = (c0+c1+c2)/3
+df_gee$first = cc
+fOut = "C:/Users/angel.gimenez/Documents/DATA/OBServ/GEE Models/Lonsdorf/gaussKer/combination/visit_index_USA.csv"
+dfOut =df_gee[,c("sampling_year","latitude","longitude","first")]
+dfOut$system.index = cc
+dfOut$.geo = cc
+write.csv(dfOut,fOut, row.names=FALSE)
