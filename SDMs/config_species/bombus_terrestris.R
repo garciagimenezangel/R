@@ -5,9 +5,9 @@ otherNames = c("B. terrestris", "Bomus terrestris", "Bombus terrestris-complex",
 yrFrom  = 1988
 yrTo    = 2100
 excludeNames = c("Bombus Sp.", "Bombus sp", "Bombus sp.", "Bombus spp", "Bombus", "Bombus lucorum", "Bombus.lucorum", "Bombus_6", "Bombus_7", "Bombus_lucorum", "Bombus_spp.", "Bombus lucorum agg") # any pollinator name equal to these strings is not considered as a candidate absence point
-gbifReady       = FALSE   # TRUE: gbif df already calculated and saved
-observReady     = FALSE  # TRUE: observ df already calculated and saved
-locatReady      = FALSE  # TRUE: locations df already calculated and saved
+gbifReady       = TRUE   # TRUE: gbif df already calculated and saved
+observReady     = TRUE  # TRUE: observ df already calculated and saved
+locatReady      = TRUE  # TRUE: locations df already calculated and saved
 featuresReady   = FALSE  # TRUE: features df already calculated and saved
 useRasters      = FALSE  # TRUE: use collection of rasters to extract features 
 

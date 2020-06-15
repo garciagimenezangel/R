@@ -4,6 +4,7 @@ library(CoordinateCleaner)
 library(rgeos)
 library(sp)
 library(stringr)
+library(rlist)
 
 downloadGbifData <- function(species, timespan) {
   pars = c(timeSpan)  # use dismo syntax for query
@@ -252,4 +253,38 @@ clean <- function(df, yrFrom=1800, yrTo=2100, minDec=3, lon="lon", lat="lat", sp
   indDecimGe3 = ( decimalplaces(df[lon]) >= minDec ) && ( decimalplaces(df[lat]) >= minDec )
   df = df[indDecimGe3,]
   return(df)
+}
+
+splitDfByYear = function(df, field, limit) {
+  # For each year, create a list of subsets of df, each with number of rows below the limit. 
+  listOfLists = list()
+  uniqueFieldVals = unique(df[,field])
+  for (fieldVal in uniqueFieldVals) {
+    listByYear = list()
+    dfField = df[df[,field] == fieldVal,] 
+    n = nrow(dfField)
+    while (n > limit) {
+      dfSel = dfField[1:limit,]                                     # select a number of rows equal to 'limit'
+      listByYear = list.append(listByYear, dfSel)                   # add to the list
+      dfField = dfField[!row.names(dfField) %in% row.names(dfSel),] # removed saved elements from dfField
+      n = nrow(dfField)
+    }
+    listByYear = list.append(listByYear, dfField)
+    listOfLists = list.append(listOfLists, listByYear)
+  }
+  # Bind the i'th element of each list. As a result, we'll get dataframes where each unique value of the selected field has multiplicity lower than the selected limit
+  maxInd = max(do.call(cbind, lapply(listOfLists, function(l){ length(l) })))
+  indSlice = 1
+  listSlices = list()
+  while(indSlice<=maxInd) {
+    dfSlice = do.call(rbind, lapply(listOfLists, function(l, i){ 
+      m = length(l)
+      if (i<=m) return(l[[i]]) 
+    }, i=indSlice))
+    listSlices = list.append(listSlices, dfSlice)
+    indSlice = indSlice + 1
+  }
+  # Sanity check: dfTest should be equal to df
+  # dfTest = do.call(rbind, lapply(listSlices, function(l){ return(l) } ))
+  return(listSlices)
 }

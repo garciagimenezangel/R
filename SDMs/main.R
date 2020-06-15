@@ -67,7 +67,14 @@ if (locatReady) {
 }
 ###############################
 
-
-
+# If dataset is too large, we can slice it:
+listDfLocations = splitDfByYear(dfLocations, 'sampling_year', 50)
+# Sanity check: dfTest should be equal to dfLocations
+dfTest = do.call(rbind, lapply(listDfLocations, function(l){ return(l) } ))
+# Save data
+for (i in seq(1,length(listDfLocations))) {
+  csvLocations = paste0("locations_",i,".csv")
+  write.csv(listDfLocations[[i]], paste0(dataDir, csvLocations), row.names=FALSE)
+}
 
 
