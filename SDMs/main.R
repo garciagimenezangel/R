@@ -17,7 +17,7 @@ library(RWeka)
 library(rlist)
 
 # Load species configuration
-source("config_species/bombus_terrestris.R")
+source("config_species/andrena_chrysosceles.R")
 
 ###############################
 # Load GBIF data: presence-only
@@ -41,7 +41,7 @@ if (observReady) {
   # Field data
   dfOBServFieldData = getOBServFieldData(observDir)
   # Some site_id's = NA. Replace by ""
-  dfOBServFieldData$site_id = as.character(df$site_id)
+  dfOBServFieldData$site_id <- unlist(lapply(dfOBServFieldData$site_id, as.character))
   dfOBServFieldData$site_id[is.na(dfOBServFieldData$site_id)] = "noID"
   dfOBServFieldData = clean(dfOBServFieldData, yrFrom, yrTo, minCoordDig, lon="longitude", lat="latitude", species="")
   write.csv(dfOBServFieldData, paste0(dataDir, csvObservField), row.names=FALSE)
@@ -67,14 +67,14 @@ if (locatReady) {
 }
 ###############################
 
-# If dataset is too large, we can slice it:
-listDfLocations = splitDfByYear(dfLocations, 'sampling_year', 50)
-# Sanity check: dfTest should be equal to dfLocations
-dfTest = do.call(rbind, lapply(listDfLocations, function(l){ return(l) } ))
-# Save data
-for (i in seq(1,length(listDfLocations))) {
-  csvLocations = paste0("locations_",i,".csv")
-  write.csv(listDfLocations[[i]], paste0(dataDir, csvLocations), row.names=FALSE)
-}
+# # If dataset is too large, we can slice it:
+# listDfLocations = splitDfByYear(dfLocations, 'sampling_year', 50)
+# # Sanity check: dfTest should be equal to dfLocations
+# dfTest = do.call(rbind, lapply(listDfLocations, function(l){ return(l) } ))
+# # Save data
+# for (i in seq(1,length(listDfLocations))) {
+#   csvLocations = paste0("locations_",i,".csv")
+#   write.csv(listDfLocations[[i]], paste0(dataDir, csvLocations), row.names=FALSE)
+# }
 
 

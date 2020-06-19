@@ -1,12 +1,13 @@
-###############################
-# Main settings
-species = "Andrena flavipes"
-otherNames = c("Andrena.flavipes","Andrena_flavipes","Andrena_ flavipes")  # other names of the species in the OBServ database
+# 
+# The configuration files in this folder must contain the following options:
+
+# Main settings (normally, the only ones that should change among configuration files for different species)
+species = "Bombus lapidarius"
+otherNames = c("bombus.lapidarius", "Bombus.lapidarius", "Bombus_ lapidarius", "Bombus_lapidarius", "B. lapidarius", "B_lapidarius", "B..lapidarius")  # other names of the species in the OBServ database. See "OBservData\Thesaurus_Pollinators\organism_guild_META_STUDIES.csv"
 yrFrom  = 1988
-yrTo    = 2020
-#excludeNames = c("Andrena") # any pollinator name that contains any of these strings is not considered as a candidate absence point
-excludeNames = c("Andrena", "Andrena sp", "Andrena sp.", "Andrena sp. ", "Andrena sp. 4", "Andrenidae", "Small Andrena sp.", "Large Andrena sp.", "Andrena ssp.", "Andrena sp1") # any pollinator name equal to these strings is not considered as a candidate absence point
-gbifReady       = TRUE   # TRUE: gbif df already calculated and saved
+yrTo    = 2100
+excludeNames = c("Bombus Sp.", "Bombus sp", "Bombus sp.", "Bombus spp", "Bombus", "Bombus_6", "Bombus_7", "Bombus_spp.") # any pollinator name equal to these strings is not considered as a candidate absence point
+gbifReady       = FALSE   # TRUE: gbif df already calculated and saved
 observReady     = FALSE  # TRUE: observ df already calculated and saved
 locatReady      = FALSE  # TRUE: locations df already calculated and saved
 featuresReady   = FALSE  # TRUE: features df already calculated and saved
@@ -33,10 +34,3 @@ coordsDigits    = 4
 minCoordDig     = 3
 removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
 ###############################
-
-
-
-
-
-
-
