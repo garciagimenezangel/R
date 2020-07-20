@@ -30,7 +30,7 @@ getOBServFieldData <- function(observDir){
   indFieldData = lapply(observFiles, function(x){grepl("field_level_data",x)})
   indFieldData = unlist(indFieldData)
   fsFieldData  = observFiles[indFieldData]
-  dfFieldData  = do.call(rbind, lapply(fsFieldData, function(file){ read.csv(file = file, header = TRUE) }))
+  dfFieldData  = plyr:::rbind.fill(lapply(fsFieldData, function(file){ read.csv(file = file, header = TRUE) }))
   dfFieldData  = dfFieldData[, names(dfFieldData) %in% c("study_id", "site_id", "latitude","longitude", "sampling_year")]
   return(dfFieldData)
 }

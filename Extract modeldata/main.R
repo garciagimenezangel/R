@@ -20,12 +20,10 @@ source('../SDMs/lib/dataFunctions.R')
 # kLAB
 #source("GetValues_KLabModels.R");
 #df_klab = GetValues_KLabModels();
-#df_klab = clean(df_klab, lon="longitude", lat="latitude", species="")
 
 # GEE
 source("GetValues_GEEModels.R");
 df_gee = GetValues_GEEModels();
-df_gee = clean(df_gee, lon="longitude", lat="latitude", species="")
 
 # Merge results from different sources
 #df_final = merge(df_klab, df_gee, by = base_col_names)
