@@ -1,8 +1,8 @@
 ######################################################
 
 # Folders
-KLAB_root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/KLab Models/"
-GEE_root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/GEE Models/"
+Rasters_root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/Output Models/Rasters/"
+GEE_root = "C:/Users/angel.gimenez/Documents/DATA/OBServ/Output Models/GEE/"
 field_data_folder = "../../OBservData/Datasets_storage/"
 output_folder = "C:/Users/angel.gimenez/Documents/DATA/OBServ/Processed modeldata/"
 

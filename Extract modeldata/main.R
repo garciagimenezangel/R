@@ -17,17 +17,16 @@ source("config.R")
 source('../SDMs/lib/dataFunctions.R')
 
 # Extract model data 
-# kLAB
-#source("GetValues_KLabModels.R");
-#df_klab = GetValues_KLabModels();
+# Rasters (kLAB or CPF)
+source("GetValues_Rasters.R");
+df_rasters = GetValues_Rasters();
 
 # GEE
 source("GetValues_GEEModels.R");
 df_gee = GetValues_GEEModels();
 
 # Merge results from different sources
-#df_final = merge(df_klab, df_gee, by = base_col_names)
-df_final = df_gee;
+df_final = merge(df_rasters, df_gee, by = base_col_names)
 
 # Sort table by the two first columns (they should be "study_id" and "field_id")
 ord = order(df_final[,1], as.numeric(df_final[,2]))

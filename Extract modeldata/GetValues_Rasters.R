@@ -1,12 +1,12 @@
 #########################################################
 #
-# This script samples output files from KLab models (for now, rasters), 
+# This script samples output files from rasters, 
 # at the points of the datasets in OBServ.
 #
-# Models KLab. Example of folders' structure for a model:
+# Example of folders' structure for a model:
 # Raster file calculated from the Lonsdorf model in KLab: model.tiff
-# Subfolders in KLAB_root correspond to model options (e.g. exponential decay and radius 3000m)
-# Then, file is found in KLAB_root/Lonsdorf/exp/r3000m/model.tiff
+# Subfolders in Rasters_root correspond to model options (e.g. exponential decay and radius 3000m)
+# Then, file is found in Rasters_root/Lonsdorf/exp/r3000m/model.tiff
 # Model ID will be built using that subfolders hierarchy: model_id = Lonsdorf.exp.r3000m.model
 #
 # This script must be called at "main.R"
@@ -14,15 +14,14 @@
 #
 # INPUT: 
 # - OBServ datasets (CSV) (field data)
-# - Root folders of the KLab-models' output files
+# - Root folders of the raster-models' output files
 # OUTPUT:
-# - Table CSV, merging OBServ datasets and KLab models. For each model, a new column is added,
+# - Table CSV, merging OBServ datasets and raster models. For each model, a new column is added,
 #   using the model_id as its name, and filled with the model predictions (if available for that location)
 #   
-#
 #########################################################
 
-GetValues_KLabModels <- function() {
+GetValues_Rasters <- function() {
   
   # Get datasets
   observFiles = list.files(field_data_folder, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
@@ -32,13 +31,12 @@ GetValues_KLabModels <- function() {
   
   # Set criteria (using reg expr) acceptable to be considered as a model output
   ext_valid   = ".(tiff|tif)$"
-  reg_defined = ".region"
-  
-  # Models = list of files in the KLAB_root folder
-  model_files = list.files(KLAB_root, full.names = FALSE, recursive = TRUE);
+
+  # Models = list of files in the Rasters_root folder
+  model_files = list.files(Rasters_root, full.names = FALSE, recursive = TRUE);
   
   # Filter according to defined criteria
-  accept = str_detect(model_files, ext_valid) & str_detect(model_files, reg_defined);
+  accept = str_detect(model_files, ext_valid);
   model_files = model_files[accept];
   
   # Get model ids
@@ -68,8 +66,10 @@ GetValues_KLabModels <- function() {
     df_temp = df[base_col_names]
     
     # Coordinates to extract model data
-    coords = cbind(df_temp["longitude"], df_temp["latitude"])
-    coords = coords[!is.na(coords["longitude"]) & !is.na(coords["latitude"]),]
+    coords      = cbind(df_temp["longitude"], df_temp["latitude"])
+    validCoords = !is.na(coords["longitude"]) & !is.na(coords["latitude"])
+    coords      = coords[validCoords,]
+    df_temp     = df_temp[validCoords,]
     if (nrow(coords) == 0) next
     sp<-SpatialPoints(coords)
     
@@ -83,7 +83,7 @@ GetValues_KLabModels <- function() {
       # Loop files associated to the model
       assoc_files = dict_models[[model_id]];
       for (assoc_file in assoc_files) {
-        rast<-raster(paste(KLAB_root, assoc_file, sep=""));     # Extract data from the model file
+        rast<-raster(paste0(Rasters_root, assoc_file));     # Extract data from the model file
         values = extract(rast, sp, method='bilinear');
         found  = !is.na(values); 
         model_data[found, 1] = values[found]
