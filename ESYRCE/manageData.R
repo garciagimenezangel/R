@@ -9,7 +9,7 @@ source("./categories.R")
 source("./functions.R")
 
 # Read dataset
-dataFile = "../../OBServ/ESYRCE_processed/data_flag012.csv"
+dataFile = "../../../DATA/OBServ/ESYRCE/PROCESSED/z30/metrics/data_flag012_CCAA.csv"
 df_data  = read.csv(dataFile, header=T)
 
 
@@ -35,7 +35,7 @@ df_slope_fieldSize = df_data %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(slop
 fileShp = "C:/Users/angel.gimenez/Documents/DATA/OBServ/Administrative areas/ESP_adm/ESP_adm2.shp"
 map     = readOGR(fileShp)
 df_new  = do.call("rbind", apply(df_data,1,calculateRegion))
-write.csv(df_new, file="../../OBServ/ESYRCE_processed/data_flag012_CCAA.csv")
+write.csv(df_new, file="../../../DATA/OBServ/ESYRCE/PROCESSED/z30/metrics/data_flag012_CCAA.csv")
 
 
 

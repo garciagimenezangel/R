@@ -17,7 +17,7 @@ library(RWeka)
 library(rlist)
 
 # Load species configuration
-source("config_species/bombus_pratorum.R")
+source("config_species/lasioglossum_morio")
 
 ###############################
 # Load GBIF data: presence-only
