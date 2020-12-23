@@ -1,42 +1,176 @@
+# Organize land cover columns from ESYRCE into more general categories
+cerealGrain = c('hardWheat',       
+                'softWheat',       
+                'barleyTwoRows',   
+                'barleySixRows',   
+                'oat',             
+                'rye',             
+                'triticale',       
+                'rice',            
+                'maize',           
+                'sorghum',         
+                'mixCerealGrain',  
+                'otherCerealGrain',
+                'quinoa')
 
-# Organize columns in categories (e.g. agriculture, seminatural...)
-agriLand    = c("cerealGrain", 
-                "legumeGrain", 
-                "tuber", 
-                "industrial",
-                "fodder", 
-                "vegetable", 
-                "ornamental", 
-                "citric",
-                "fruitNoCitric",
-                "vineyard",
-                "oliveTrees",
-                "otherWoodyCrop",
-                "nursery",
-                "association",
-                "emptyGreenh")
+legumeGrain = c('frijol',          
+                'fabaBean',        
+                'lentil',          
+                'chickpea',        
+                'pea',             
+                'commonVetch',     
+                'lupine',          
+                'carob',
+			        	'ervil',
+                'otherLegumeGrain')	
 
-pasture     = c("naturalMeadow", 
-                "highMountainMeadow", 
-                "pastureGrassland", 
-                "pastureShrub")
+tuber = c('potato',        
+          'sweetPotato',   
+          'yellowNutsedge',
+          'otherTuber')	  
 
-seminatural = c("orchard", 
-                "fallow", 
-                "posio", 
-                "conifers", 
-                "broadleafFast", 
-                "broadleafSlow", 
-                "poplar", 
-                "mixedForest", 
-                "shrub", 
-                "wasteland", 
-                "spartizal", 
-                "abandoned", 
-                "improductive")
+industrial = c(	'sugarcane',      
+                'sugarbeet',      
+                'cotton',         
+                'sunflower',      
+                'soybean',        
+                'rapeseed',       
+                'flax',           
+                'peanut',         
+                'camelina',       
+                'safflower',      
+                'otherOleaginous',
+                'tobacco',        
+                'industTomato',   
+                'capsicumPaprika',
+                'condiment',      
+                'hops',           
+                'finesHerbes',    
+                'otherIndustrial')
 
-artificial   = c("notAgri")
+fodder = c('maizeFodder',      
+           'alfalfa',          
+           'vetchFodder',      
+	         'otherFodder',      
+		       'grasslandPolifite',
+		       'turnipFodder',     
+		       'beetFodder',       
+		       'collard',          
+		       'otherWeedFodder')	 
 
+vegetable = c('betaVulgarisCicla',		  
+		          'garlic',           
+		          'artichoke',        
+		          'celery',           
+		          'eggplant',         
+		          'pumpkin',          
+		          'zucchini',         
+		          'agaricusBisporus', 
+		          'mushroom',         
+		          'onion',            
+		          'broccoli',         
+		          'cabbage',          
+		          'cauliflower',      
+		          'endive',           
+		          'aspargus',         
+		          'spinach',          
+		          'sweetCorn',        
+		          'strawberry',       
+		          'rapini',           
+              'greenPea',         
+              'greenBean',        
+              'kidneyBean',       
+              'lettuce',          
+              'redCabbage',       
+              'melon',            
+              'cucumber',         
+              'leek',             
+              'beetTable',        
+              'sweetPepper',      
+              'watermelon',
+		          'tomato',
+              'carrot',           
+              'otherVegetable',   
+              'emptyGarden')			
+
+ornamental = c('ornamental')
+
+citric = c('orange',      
+           'clementine',  
+           'lemon',       
+           'bitterOrange',
+           'grapefruit',  
+           'otherCitrics')
+
+fruitNoCitric = c('apple',            
+                  'pear',             
+                  'quince',           
+                  'loquat',           
+                  'apricot',          
+                  'cherry',           
+                  'peach',            
+                  'plum',             
+                  'fig',              
+                  'cherimoya',        
+                  'avocado',          
+                  'banana',           
+                  'persimmon',        
+                  'papaya',           
+                  'pineapple',        
+                  'kiwi',             
+                  'barbaryFig',       
+                  'mango',            
+                  'pomegranate',      
+                  'almond',           
+                  'walnut',           
+                  'hazelnut',         
+                  'chestnut',         
+                  'redRaspberry',     
+                  'pistachio',        
+                  'otherFruitNoCitric')		
+
+vineyard = c('whiteGrapeSeedless',				  
+			       'whiteGrape',        	  
+			       'redGrapeSeedless',  	  
+			       'redGrape',          	  
+			       'transfGrape')
+
+oliveTrees = c('oliveTable', 			 
+		           'olive',      	  
+		           'oliveMill')
+
+otherWoodyCrop = c('carobTree',     
+                   'otherOtherWoody')		
+
+nursery = c('nursery')
+
+orchard = c('orchard')
+
+forested = c('poplar',      
+             'pawlonia',          
+             'quercusIlexTruffle',
+			       'conifers',     
+			       'broadleafFast',
+			       'broadleafSlow',
+			       'mixedForest',  
+			       'shrub')
+
+improductive = c('improductive')
+
+notAgri = c('notAgri')
+
+other = c('fallow',     
+          'emptyGreenh',
+          'posio',      
+          'wasteland',  
+          'spartizal',  
+		      'abandoned')
+
+pasture = c("naturalMeadow", 
+            "highMountainMeadow", 
+            "pastureGrassland", 
+            "pastureShrub") 
+		  
 soilMaint    = c("traditional", 
                  "minimal", 
                  "spontVegCover", 
@@ -48,74 +182,35 @@ soilMaint    = c("traditional",
 sowTechn     = c("directSowing", 
                  "traditSowing")
 
-crops       = c("hardWheat",
-                "softWheat",
-                "barleyTwoRows",
-                "barleySixRows",
-                "oat",
-                "rye",
-                "rice",
-                "maize",
-                "quinoa",
-                "frijol",
-                "fabaBean",
-                "lentil",
-                "chickpea",
-                "pea",
-                "ervil",
-                "potato",
-                "sugarbeet",
-                "cotton",
-                "sunflower",
-                "soybean",
-                "rapeseed",
-                "industTomato",
-                "fodderMaize",
-                "garlic",
-                "artichoke",
-                "eggplant",
-                "zucchini",
-                "onion",
-                "strawberry",
-                "greenPea",
-                "greenBean",
-                "kidneyBean",
-                "melon",
-                "cucumber",
-                "sweetPepper",
-                "watermelon",
-                "carrot",
-                "orange",
-                "clementine",
-                "lemon",
-                "apple",
-                "pear",
-                "apricot",
-                "cherry",
-                "peach",
-                "plum",
-                "banana",
-                "almond",
-                "walnut",
-                "whiteGrapeSeedless",
-                "whiteGrape",
-                "redGrapeSeedless",
-                "redGrape",
-                "transfGrape",
-                "olive",
-                "oliveTable",
-                "oliveMill")
+avgSize = c("avgSize", "avgFieldSize", "avgSeminatSize", "avgOtherSize", "avgSizeDiss", "avgSeminatSizeDiss", "avgFieldSizeDiss", "avgOtherSizeDiss")
 
-varianceYield = paste0("var_", crops)
-
-fieldSize = c("avgFieldSize")
+edges = c("edgeDensity","edgeDenSeminat","edgeDenFields","edgeDenOther","edgeDensityDiss","edgeDenSemiDiss","edgeDenFielDiss","edgeDenOtherDiss")
 
 heterogen = c("heterogeneity")
 
-demand    = c("demand")
+demand = c("demand")
+
+agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
+                ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery)   
+
+seminatural = c(forested, otherWoodyCrop, pasture)
+
+landcovertypes = c(agriLand, seminatural, other, improductive, notAgri)
+
+prop_landcovertypes  = paste0("prop_",landcovertypes)
+yield_landcovertypes = paste0("yield_",landcovertypes)
+var_landcovertypes   = paste0("var_",landcovertypes)
 
 # Sanity check (columns categorized)
-#for (name in colnames(df_data)) { if(name %in% agriculture | name %in% pastures | name %in% seminatural | name %in% artificial | name %in% soilMaint| name %in% sowTechn | name %in% crops | name %in% varianceYield | name %in% fieldSize | name %in% heterogen | name %in% demand) {} else {print(name)} }
+for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
+                                     name %in% yield_landcovertypes | 
+                                     name %in% var_landcovertypes   |
+                                     name %in% soilMaint            |
+                                     name %in% sowTechn             |
+                                     name %in% avgSize              |
+                                     name %in% heterogen            |
+                                     name %in% demand               |
+                                     name %in% edges) {} else {print(name)} }
 
 
 
