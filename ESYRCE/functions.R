@@ -69,13 +69,10 @@ calculateRegion <- function(data) {
   y    = as.numeric(data["y_center"])
   pts  = SpatialPoints(data.frame(x=x, y=y))
   pts@proj4string <- CRS("EPSG:4326")
-  ptsT = spTransform(pts, proj4string(map)) # transform coordinates into map's crs
-  info = over(ptsT, map) # get information of the map at the location of the point
+  info = over(pts, map) # get information of the map at the location of the point (note: the map MUST be in the same CRS ("EPSG:4326") )
   newdata = data
   newdata["province"] = as.character(info$NAME_2)
   newdata["region"]   = as.character(info$NAME_1)
-  newdata["longitude"]= coordinates(ptsT)[,"x"]
-  newdata["latitude"] = coordinates(ptsT)[,"y"]
   return(newdata)
 }
 

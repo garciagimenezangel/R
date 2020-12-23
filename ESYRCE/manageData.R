@@ -10,8 +10,11 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/analysis/2020-12/"
+GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
+
 # Read dataset
-dataFile = "C:/Users/angel/DATA/ESYRCE/PROCESSED - local testing/z30/metrics/metrics_20-12-18.csv"
+dataFile = paste0(dataFolder, "metrics_20-12-18.csv")
 df_data  = read.csv(dataFile, header=T)
 
 
@@ -31,24 +34,34 @@ df_slope_fieldSize = df_data %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(slop
 #...
 
 
-#####################################
-# Add coordinates of the center of the segments
-#####################################
+##########################################################################
+# Add coordinates of the center of the segments, and associate with region
+##########################################################################
 # To avoid replication of calculations, get unique combinations of "D1_HUS" and "D2_NUM" and associate coordinates of the center of the segment (assume unique combinations have the same size of the segment, which in practice is not always true)
-lookupCoord = calculateLookupCoord(df_data[,c("D1_HUS","D2_NUM","segArea")]) 
-write.csv(lookupCoord, file="C:/Users/angel/DATA/ESYRCE/PROCESSED - local testing/z30/metrics/lookup_coordinates.csv",row.names=FALSE)
-
-# Add coordinates by merging dataframe with lookup table
-df_new  = merge(df_data, lookupCoord, by=c("D1_HUS","D2_NUM"), all.x = TRUE)
-write.csv(df_new, file="C:/Users/angel/DATA/ESYRCE/PROCESSED - local testing/z30/metrics/metrics_20-12-18_centers.csv",row.names=FALSE)
-
-#####################################
-# Add province and region to dataset
-#####################################
+lookupCoord = calculateLookupCoord(df_data[,c("D1_HUS","D2_NUM","segArea")])
+lookupCoord = lookupCoord %>% select(-c("segArea"))
+# Add region associated to the coordinates
+lookupCoordRegions = do.call("rbind", apply(lookupCoord,1,calculateRegion))
 fileShp = "C:/Users/angel/DATA/Administrative areas/ESP_adm/ESP_adm2.shp"
 map     = readOGR(fileShp)
-df_new  = do.call("rbind", apply(df_new,1,calculateRegion))
-write.csv(df_new, file="C:/Users/angel/DATA/ESYRCE/PROCESSED - local testing/z30/metrics/metrics_20-12-18_centers_CCAA.csv",row.names=FALSE)
+# Save file
+write.csv(lookupCoordRegions, file=paste0(dataFolder,"lookup_coordinates_regions.csv"),row.names=FALSE)
+
+# Add coordinates and region by merging dataframe with lookup table
+df_new = merge(df_data, lookupCoordRegions, by=c("D1_HUS","D2_NUM"), all.x = TRUE)
+write.csv(df_new, file=paste0(dataFolder,"geo_metrics_20-12-18.csv"),row.names=FALSE)
+
+
+#####################################
+# Join data from pollination models
+#####################################
+modelFiles = paste0(GEEFolder, c("ZonasNaturales2018_man0_mod0.csv"))
+for (modelFile in modelFiles) {
+  df_pollination  = read.csv(modelFile, header=T)
+  df_new = merge(df_new, df_pollination, by=c("D1_HUS","D2_NUM"), all.x = TRUE)
+}
+
+
 
 #######################
 # Calculate variograms
@@ -77,7 +90,7 @@ coordinates(neighbours)= ~ x_center+y_center
 variogramNeighbors = variogram(prop_agriLand~1, data=neighbours)
 plot(variogramNeighbors)
 
-# Some crops, for example maize
+# Individual crop, for example maize
 neighbours = subset(df_new, x_center>xmin & x_center<xmax & y_center>ymin & y_center<ymax)
 coordinates(neighbours)= ~ x_center+y_center
 variogramNeighbors = variogram(prop_maize~1, data=neighbours)
