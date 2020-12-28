@@ -76,9 +76,9 @@ GetValues_GEEModels <- function() {
       model_data$round_lat = round(model_data$latitude, digits=coords_digits)
       
       # Drop not useful columns (inherited from the export in GEE)
-      model_data = model_data %>% select(-contains("latitude"))  # we use round_lat instead of latitude for merging
-      model_data = model_data %>% select(-contains("longitude")) # we use round_lon instead of longitude for merging
-      model_data = model_data %>% select(-c("system.index", ".geo"))
+      model_data = model_data %>% dplyr::select(-contains("latitude"))  # we use round_lat instead of latitude for merging
+      model_data = model_data %>% dplyr::select(-contains("longitude")) # we use round_lon instead of longitude for merging
+      model_data = model_data %>% dplyr::select(-c("system.index", ".geo"))
       
       # There might be duplicated values in the tables from GEE, because some field points are very near and have the same coordintes. Remove those rows:
       model_data = model_data[!duplicated(model_data),]
@@ -91,8 +91,8 @@ GetValues_GEEModels <- function() {
     }
     
     # Drop rounded coordinates, sort and export table
-    df_temp = df_temp %>% select(-c("round_lon"))
-    df_temp = df_temp %>% select(-c("round_lat"))
+    df_temp = df_temp %>% dplyr::select(-c("round_lon"))
+    df_temp = df_temp %>% dplyr::select(-c("round_lat"))
     
     # Add geodata associated with this dataset, into the output dataframe
     df_out = rbind(df_out, df_temp)

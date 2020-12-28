@@ -11,7 +11,7 @@ library(tidyverse)
 ####################################
 calculateSlope <- function(data, columns) {
   xaxis = data$YEA # xaxis: years
-  yaxis = rowSums(data[,columns]) # yaxis: sum of the columns selected for aggregation (defined before the call to the function)
+  yaxis = rowSums(data[,columns]) # yaxis: sum of the columns selected for aggregation
   valid = !is.na(xaxis) & !is.na(yaxis) # discard NA values
   xaxis = xaxis[valid]
   yaxis = yaxis[valid]
@@ -21,8 +21,8 @@ calculateSlope <- function(data, columns) {
     summ  = summary(lmMod)
     coeff = summ$coefficients
     slope = coeff[2]
-  } 
-  return(slope)
+  }
+  return(tibble::tibble(slope = slope))
 }
 
 
@@ -74,6 +74,27 @@ calculateRegion <- function(data) {
   newdata["province"] = as.character(info$NAME_2)
   newdata["region"]   = as.character(info$NAME_1)
   return(newdata)
+}
+
+
+####################################
+# INPUT: 
+# - dataframe with locations [longitude, latitude]
+# - dataframe with model values at those locations
+# - digits to round coordinates
+# OUTPUT: original dataset with added column with model values
+####################################
+addModelValues <- function(df_base, df_model, digits) {
+  df_model = roundCoordinates(df_model,digits)
+  df_base  = roundCoordinates(df_base,digits)
+  df_out   = merge(df_base, df_model, by=c("longitude","latitude"), all.x = TRUE)
+  if (nrow(df_base) != nrow(df_out)) print("ERROR addModelValues-> CHECK") # Sanity check
+  return(df_out)
+}
+roundCoordinates <- function(data, digits) {
+  data[,"longitude"] = round(data$longitude, digits=digits)
+  data[,"latitude"]  = round(data$latitude, digits=digits)
+  return(data)
 }
 
 
