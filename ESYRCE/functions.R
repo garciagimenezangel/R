@@ -6,7 +6,7 @@ library(tidyverse)
 ####################################
 # INPUT: 
 # - data from a group by operation. 
-# - columns to aggregate (must be defined before the call to the function)
+# - columns to aggregate
 # OUTPUT: slope of a linear regression using the aggregated values of the columns at every year with data
 ####################################
 calculateSlope <- function(data, columns) {
@@ -22,7 +22,7 @@ calculateSlope <- function(data, columns) {
     coeff = summ$coefficients
     slope = coeff[2]
   }
-  return(tibble::tibble(slope = slope))
+  return(tibble::tibble(slope = slope, longitude=data$longitude, latitude=data$latitude))
 }
 
 
@@ -34,7 +34,7 @@ calculateLookupCoord <- function(data) {
   df_dups <- data[c("D1_HUS", "D2_NUM")]
   lookup = data[!duplicated(df_dups),]
   lookup = do.call("rbind", apply(lookup,1,calculateCoordRow))
-  lookupCoord = lookupCoord %>% select(-c("segArea"))
+  lookup = lookup %>% dplyr::select(-c("segArea"))
   return(lookup)
 }
 
@@ -51,22 +51,22 @@ calculateCoordRow <- function(dataRow) {
   pts@proj4string <- CRS(proj)
   ptsT = spTransform(pts, CRS("EPSG:4326"))
   newdata = data
-  newdata["x_center"] = ptsT@coords[,"x"]
-  newdata["y_center"] = ptsT@coords[,"y"]
+  newdata["longitude"] = as.numeric(ptsT@coords[,"x"])
+  newdata["latitude"]  = as.numeric(ptsT@coords[,"y"])
   return(newdata)
 }
 
 
 ####################################
 # INPUT: 
-# - dataset with coordinates [x_center, y_center] in the CRS("EPSG:4326")
+# - dataset with coordinates [longitude, latitude] in the CRS("EPSG:4326")
 # - map where the Spanish provinces and ccaa are delimited (must be defined before the call to the function)
 # OUTPUT: array with the Spanish province or com. aut. where each point is located
 ####################################
 calculateRegion <- function(data) {
   data = data.frame(as.list(data))
-  x    = as.numeric(data["x_center"])
-  y    = as.numeric(data["y_center"])
+  x    = as.numeric(data["longitude"])
+  y    = as.numeric(data["latitude"])
   pts  = SpatialPoints(data.frame(x=x, y=y))
   pts@proj4string <- CRS("EPSG:4326")
   info = over(pts, map) # get information of the map at the location of the point (note: the map MUST be in the same CRS ("EPSG:4326") )
@@ -92,6 +92,8 @@ addModelValues <- function(df_base, df_model, digits) {
   return(df_out)
 }
 roundCoordinates <- function(data, digits) {
+  data$longitude = as.numeric(data$longitude)
+  data$latitude  = as.numeric(data$latitude)
   data[,"longitude"] = round(data$longitude, digits=digits)
   data[,"latitude"]  = round(data$latitude, digits=digits)
   return(data)
@@ -108,5 +110,13 @@ saveGPKG <- function(data, outfile) {
   pts = SpatialPoints(data.frame(x=x, y=y))
   pts@proj4string <- CRS("EPSG:4326")
   writeOGR(pts,dsn=outfile,layer=layer,driver="GPKG")
+}
+
+mean1000 = function(x){
+  return(mean(x)*1000)
+}
+
+median1000 = function(x){
+  return(median(x)*1000)
 }
 

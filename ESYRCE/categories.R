@@ -195,6 +195,8 @@ agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, or
 
 seminatural = c(forested, otherWoodyCrop, pasture)
 
+fruitTree = c(citric, fruitNoCitric)
+
 landcovertypes = c(agriLand, seminatural, other, improductive, notAgri)
 
 prop_landcovertypes  = paste0("prop_",landcovertypes)
