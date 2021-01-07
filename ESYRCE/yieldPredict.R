@@ -14,7 +14,7 @@ dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
 GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "geo_metrics_20-12-18.csv")
+dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
 df_data      = read.csv(dataFile, header=T)
 modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
@@ -48,7 +48,7 @@ boxplot(df_yield[,yieldCol] ~ df_yield$YEA, range=100, ylim=c(-100, 10000))
 #########
 # Models
 #########
-# Model: Production ~ Climatic (including interanual variability, total_prec + min_temp + max_temp) * 
+# Model (Ainhoa): Production ~ Climatic (including interanual variability, total_prec + min_temp + max_temp) * 
 #Landscape configuration (avgFieldSize + FALTAN: edge density, average size natural area) * 
 #Landscape composition (heterogeneity + seminatural) * 
 #time (* management) + cuadraticos [medidas repetidas] 
