@@ -10,12 +10,12 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
-GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
-
 # Read datasets
+dataFolder   = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
 dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
 df_data      = read.csv(dataFile, header=T)
+df_data$region   = abbreviate(df_data$region)
+df_data$province = abbreviate(df_data$province)
 modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
@@ -46,9 +46,9 @@ pl_crop
 boxplot(df_yield[,yieldCol] ~ df_yield$YEA, range=100, ylim=c(-100, 10000))
 
 
-###########################################################
-# Process data to be comparable among crops through time
-###########################################################
+#############################################################################
+# YIELD vs INTENSIFICATION (grouped by level of pollinators' dependence) 
+#############################################################################
 # 1. Temporal "correction"
 # From Deguines 2014, one could account for the (hypothetical) increase of the yield through time, by 
 # means of a regression, using the residuals + predicted yield at the center of the time interval.
@@ -85,10 +85,50 @@ zScore = merge(zScore, meansZScore, all.x=TRUE) %>% drop_na()
 zScore$z_meanYield   = (zScore$yield - zScore$mean_yield) / zScore$sd_yield
 zScore$z_yieldVariab = (zScore$yield_variab - zScore$mean_variab) / zScore$sd_variab
 
+# climate?
+# Water deficit
+watDef= df_data[,c("YEA","water_def")] %>% drop_na()
+zWatDef = watDef %>% group_by(YEA) %>% summarize(mean=mean(water_def))
+zWatDef$zscore = scale(zWatDef$mean)
+aa = zScore %>% group_by(YEA) %>% summarize(median=median(z_meanYield))
+bb = merge(aa,zWatDef)
+plot(bb$median, bb$zscore)
+# Total precipitation
+prcp= df_data[,c("YEA","total_prec")] %>% drop_na()
+zprcp = prcp %>% group_by(YEA) %>% summarize(mean=mean(total_prec))
+zprcp$zscore = scale(zprcp$mean)
+aa = zScore %>% group_by(YEA) %>% summarize(median=median(z_meanYield))
+bb = merge(aa,zprcp)
+plot(bb$median, bb$zscore)
+# tmin
+tmin= df_data[,c("YEA","tmin")] %>% drop_na()
+ztmin = tmin %>% group_by(YEA) %>% summarize(mean=mean(tmin))
+ztmin$zscore = scale(ztmin$mean)
+aa = zScore %>% group_by(YEA) %>% summarize(median=median(z_meanYield))
+bb = merge(aa,ztmin)
+plot(bb$median, bb$zscore)
+# tmax
+tmax= df_data[,c("YEA","tmax")] %>% drop_na()
+ztmax = tmax %>% group_by(YEA) %>% summarize(mean=mean(tmax))
+ztmax$zscore = scale(ztmax$mean)
+aa = zScore %>% group_by(YEA) %>% summarize(median=median(z_meanYield))
+bb = merge(aa,ztmax)
+plot(bb$median, bb$zscore)
 
-##############################################
-# Compare z-scores with intensification index
-##############################################
+
+# 3. Intensification metrics: avgFieldSize(sin disolver), propSeminatural/edgeDensitySeminat, avgSeminatSize, heterogeneity
+intensif1          = scale(df_data$avgFieldSize) # avgFieldSize
+propSeminat        = rowSums(df_data[,paste0("prop_",seminatural)])
+intensif2          = - scale( propSeminat/df_data$edgeDenSemiDiss ) # propSeminatural/edgeDensitySeminat
+intensif3          = - scale(df_data$avgSeminatSize) # avgSeminatSize
+intensif4          = - scale(df_data$heterogeneity)  # heterogeneity
+df_data$intenIndex = (intensif1 + intensif2 +intensif3 + intensif4) / 4
+df_intenIndex      = df_data %>% group_by(YEA, region) %>% summarise(mean=mean(intenIndex, na.rm = TRUE))
+# Plot evolution
+boxplot(df_intenIndex$mean ~ df_intenIndex$YEA)
+(pl_intens<-ggplot(df_intenIndex, aes(YEA, mean)) +
+  geom_point(aes(colour = factor(region)))+ 
+  geom_smooth(method="lm", se=TRUE, aes(color=region)))
 
 
 #########
