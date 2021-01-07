@@ -24,7 +24,7 @@ df_pollModel = read.csv(modelFile, header=T)
 # Explore data
 ###############
 # One plot for each province/region
-crop     = "rapeseed"
+crop     = "hardWheat"
 yieldCol = paste0("yield_",crop)
 useCols  = c("D1_HUS", "D2_NUM", "province", "region", "YEA", yieldCol)
 indYield = !is.na(df_data[,yieldCol]) & df_data[,yieldCol] != 0
@@ -36,7 +36,7 @@ stPlot = paste(stPlot, "+ facet_wrap(~province, nrow=2)", "+ ylim(0, 10000)")
 eval(parse(text=stPlot))
 
 # Plot everything together by region? Difficult to see anything
-pl_crop<-ggplot(df_yield, aes(YEA, yield_rapeseed)) +
+pl_crop<-ggplot(df_yield, aes(YEA, yield_hardWheat)) +
   geom_point(aes(colour = factor(region)))+ 
   geom_smooth(method="lm", se=TRUE, aes(color=region)) + 
   ylim(0, 10000)
@@ -44,6 +44,52 @@ pl_crop
 
 # By year
 boxplot(df_yield[,yieldCol] ~ df_yield$YEA, range=100, ylim=c(-100, 10000))
+
+
+###########################################################
+# Process data to be comparable among crops through time
+###########################################################
+# 1. Temporal "correction"
+# From Deguines 2014, one could account for the (hypothetical) increase of the yield through time, by 
+# means of a regression, using the residuals + predicted yield at the center of the time interval.
+# However, from what I can see in the crops that I've tested (see previous lines of codee), 
+# there is no evident trend upwards with time...
+# Should we do the temporal "correction" of the hypothetical increase of the yield in time? 
+
+# 2. Z-scores (test by region and by province)
+# REGION
+zScoreNames = c("crop","YEA","region","yield","sd")
+zScore = data.frame(matrix(ncol=length(zScoreNames),nrow=0, dimnames=list(NULL, zScoreNames)))
+# Mean by region and year
+for (crop in agriLand) {
+  thresholdYield      = 50 # take values of yields (kg/ha) larger than this threshold
+  cropCol             = paste0("yield_",crop)
+  useCols             = c("YEA", "region", cropCol)
+  indYield            = !is.na(df_data[,cropCol]) & df_data[,cropCol] > thresholdYield
+  df_yield            = df_data[indYield, useCols]
+  df_crop_meanSd      = df_yield %>% group_by(YEA, region) %>% summarise_at(.vars = cropCol, .funs = c(mean,sd))
+  df_crop_meanSd      = df_crop_meanSd %>% rename(yield=fn1, sd=fn2) %>% drop_na()
+  df_crop_meanSd$crop = crop
+  zScore              = rbind(zScore, df_crop_meanSd)
+}
+# Yield variability
+zScore$yield_variab = zScore$sd*1000 / zScore$yield
+# Z-score
+meansZScore = zScore %>% 
+  group_by(crop, YEA) %>% 
+  summarise(mean_yield = mean(yield), 
+            mean_variab = mean(yield_variab), 
+            sd_yield = sd(yield), 
+            sd_variab = sd(yield_variab)) 
+zScore = merge(zScore, meansZScore, all.x=TRUE) %>% drop_na()
+zScore$z_meanYield   = (zScore$yield - zScore$mean_yield) / zScore$sd_yield
+zScore$z_yieldVariab = (zScore$yield_variab - zScore$mean_variab) / zScore$sd_variab
+
+
+##############################################
+# Compare z-scores with intensification index
+##############################################
+
 
 #########
 # Models

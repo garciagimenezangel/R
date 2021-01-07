@@ -78,8 +78,8 @@ vegetable = c('betaVulgarisCicla',
 		          'strawberry',       
 		          'rapini',           
               'greenPea',         
-              'greenBean',        
-              'kidneyBean',       
+              'broadBean',        
+              'greenBean',       
               'lettuce',          
               'redCabbage',       
               'melon',            
@@ -202,6 +202,26 @@ landcovertypes = c(agriLand, seminatural, other, improductive, notAgri)
 prop_landcovertypes  = paste0("prop_",landcovertypes)
 yield_landcovertypes = paste0("yield_",landcovertypes)
 var_landcovertypes   = paste0("var_",landcovertypes)
+
+# Levels of pollinators' dependence
+essential = c('pumpkin','zucchini','melon','watermelon','cherimoya','kiwi')
+great     = c('turnipFodder','cucumber','apple','pear','loquat','apricot','cherry','peach','plum','avocado','mango','almond','redRaspberry')
+modest    = c('soybean','rapeseed','industTomato','capsicumPaprika','eggplant','strawberry','broadBean','fig','pomegranate','chestnut',
+              'orchard')
+little    = c('flax','peanut','safflower','tomato','orange','clementine','lemon',       
+              'bitterOrange','grapefruit','otherCitrics','persimmon','papaya')
+noIncrease= c(cerealGrain,'lentil','chickpea','pea','carob','yellowNutsedge','sugarcane','sugarbeet','hops','beetFodder','betaVulgarisCicla',
+              'spinach','sweetCorn','greenPea','lettuce','sweetPepper','beetTable','walnut','hazelnut','pistachio','whiteGrapeSeedless',				  
+              'whiteGrape','redGrapeSeedless','redGrape','transfGrape','oliveTable','olive','oliveMill','carobTree','poplar')
+increase  = c('frijol','fabaBean','commonVetch','lupine','cotton','camelina','rapini','greenBean','quince','barbaryFig','pawlonia')
+unknown   = c('ervil','otherLegumeGrain','otherTuber','otherOleaginous','condiment','finesHerbes','otherIndustrial','maizeFodder','otherFodder',
+              'grasslandPolifite','collard','otherWeedFodder','agaricusBisporus','mushroom','otherVegetable','emptyGarden','ornamental',
+              'otherFruitNoCitric','otherOtherWoody','nursery','quercusIlexTruffle','conifers','broadleafFast','broadleafSlow','mixedForest',  
+              'shrub')
+increaseBreeding = c('potato','sweetPotato','garlic','banana','pineapple')
+increaseSeedProd = c('tobacco','alfalfa','vetchFodder', 'artichoke','celery','onion','broccoli','cabbage','cauliflower','endive','aspargus',
+                     'redCabbage','leek','carrot')
+
 
 # Sanity check (columns categorized)
 for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
