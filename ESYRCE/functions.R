@@ -25,6 +25,28 @@ calculateSlope <- function(data, columns) {
   return(tibble::tibble(slope = slope, longitude=data$longitude, latitude=data$latitude))
 }
 
+####################################
+# INPUT: 
+# - data from a group by operation. 
+# - column name
+# OUTPUT: slope of a linear regression using the aggregated values of the columns at every year with data
+####################################
+calculateSlopeOnecolumn <- function(data, columnName) {
+  xaxis = data$YEA # xaxis: years
+  yaxis = data[,columnName] # yaxis: column name
+  valid = !is.na(xaxis) & !is.na(yaxis) # discard NA values
+  xaxis = xaxis[valid]
+  yaxis = yaxis[valid]
+  slope = NA
+  if (length(xaxis) > 2) { # calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
+    lmMod <- lm(yaxis ~ xaxis, data=data.frame(xaxis = xaxis, yaxis=yaxis))
+    summ  = summary(lmMod)
+    coeff = summ$coefficients
+    slope = coeff[2]
+  }
+  return(tibble::tibble(slope = slope))
+}
+
 
 ####################################
 # INPUT: dataframe from ESYRCE dataset, with coordinates of the segments encoded in the fields "D1_HUS" and "D2_NUM", and size of the segment 

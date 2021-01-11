@@ -190,6 +190,10 @@ heterogen = c("heterogeneity")
 
 demand = c("demand")
 
+# System
+irrigated = c("waterScarce", "irrigated", "greenhouse")
+dry = c("dry")
+
 agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
                 ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery)   
 
@@ -222,6 +226,9 @@ increaseBreeding = c('potato','sweetPotato','garlic','banana','pineapple')
 increaseSeedProd = c('tobacco','alfalfa','vetchFodder', 'artichoke','celery','onion','broccoli','cabbage','cauliflower','endive','aspargus',
                      'redCabbage','leek','carrot')
 
+pollImportant = c(essential, great, increaseBreeding, increaseSeedProd)
+pollNotImport = c(little, noIncrease)
+
 
 # Sanity check (columns categorized)
 for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
@@ -232,7 +239,9 @@ for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  |
                                      name %in% avgSize              |
                                      name %in% heterogen            |
                                      name %in% demand               |
-                                     name %in% edges) {} else {print(name)} }
+                                     name %in% edges                |
+                                     name %in% irrigated            |
+                                     name %in% dry) {} else {print(name)} }
 
 
 
