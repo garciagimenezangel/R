@@ -5,6 +5,7 @@ library(MuMIn)
 library(nlme)
 library(ggplot2)
 library(dplyr)
+library(ggeffects)
 
 # Model data repo
 model_repo = "C:/Users/angel/git/OBserv_models/"
@@ -56,72 +57,62 @@ hist(df_data$ab_wild_comparable)
 # SPAIN
 df_spain <- subset(df_data, country == "Spain")
 dat = df_spain
+dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0) & !is.na(ab_wild_comparable))
 
 # EUROPE
 dat = df_data
+dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0) & !is.na(ab_wild_comparable))
 
 ###############################
-# Lonsdorf.ZonasNaturales mod0 
+# MODELS
 ###############################
-# Run model
-scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.ZonasNaturales_man0_mod0)
+# Lonsdorf.ZonasNaturales mod0
 model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.ZonasNaturales_man0_mod0 + (1|study_id), data = dat, na.action = na.omit)
 r.squaredGLMM(model)
-qqnorm(resid(model))
-qqline(resid(model))
-(p2<-ggplot(dat, aes(Lonsdorf.ZonasNaturales_man0_mod0, ab_wild_comparable)) +
-  geom_point(size=2.5, shape=21,color = "black", aes(fill=factor(crop))) +
-  geom_smooth(method="lm", size=1, se=TRUE, color = "black", alpha=0.4) +
-  xlab("Predicted Spain experts") +      
-  ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
-  theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
-  scale_fill_discrete(name="Crop") +  
-  theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
+# qqnorm(resid(model))
+# qqline(resid(model))
 
-###############################
-# Lonsdorf.ZonasNaturales mod1 
-###############################
-# Run model
-scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.ZonasNaturales_man0_mod1)
+# Lonsdorf.ZonasNaturales mod1
 model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.ZonasNaturales_man0_mod1 + (1|study_id), data = dat, na.action = na.omit)
 r.squaredGLMM(model)
-(p2<-ggplot(dat, aes(Lonsdorf.ZonasNaturales_man0_mod0, ab_wild_comparable)) +
-    geom_point(size=2.5, shape=21,color = "black", aes(fill=factor(crop))) +
-    geom_smooth(method="lm", size=1, se=TRUE, color = "black", alpha=0.4) +
-    xlab("Predicted Spain experts") +      
+
+# Lonsdorf.INVEST.CORINE mod0
+model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.INVEST.CORINE_man0_mod0 + (1|study_id), data = dat, na.action = na.omit)
+r.squaredGLMM(model)
+
+#  Lonsdorf.INVEST.CORINE mod1
+model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.INVEST.CORINE_man0_mod1 + (1|study_id), data = dat, na.action = na.omit)
+r.squaredGLMM(model)
+
+##############################
+# PLOTS
+##############################
+term = "Lonsdorf.ZonasNaturales_man0_mod1" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
+# Predicted values
+pred.mm <- ggpredict(model, terms = term)  # this gives overall predictions for the model
+(ggplot(pred.mm) + 
+    geom_line(aes(x = x, y = predicted)) +          # slope
+    geom_ribbon(aes(x = x, ymin = predicted - std.error, ymax = predicted + std.error), 
+                fill = "lightgrey", alpha = 0.5) +  # error band
+    geom_point(data = dat,                      # adding the raw data (scaled values)
+               aes(x = Lonsdorf.INVEST.CORINE_man0_mod1, y = ab_wild_comparable, colour = crop)) + 
+    xlab("Predicted") +      
     ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
     theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
     scale_fill_discrete(name="Crop") +  
-    theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
+    theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold"))
+)
 
-##############################
-# Lonsdorf.INVEST.CORINE mod0
-##############################
-# Run model
-scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.INVEST.CORINE_man0_mod0)
-model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.INVEST.CORINE_man0_mod0 + (1|study_id), data = dat, na.action = na.omit)
-r.squaredGLMM(model)
+# Linear fit
+scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.ZonasNaturales_man0_mod0)
 (p2<-ggplot(dat, aes(Lonsdorf.INVEST.CORINE_man0_mod0, ab_wild_comparable)) +
     geom_point(size=2.5, shape=21,color = "black", aes(fill=factor(crop))) +
     geom_smooth(method="lm", size=1, se=TRUE, color = "black", alpha=0.4) +
-    xlab("Predicted INVEST") +      
+    xlab("Predicted") +      
     ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
     theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
     scale_fill_discrete(name="Crop") +  
     theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
 
-##############################
-# Lonsdorf.INVEST.CORINE mod1
-##############################
-# Run model
-scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.INVEST.CORINE_man0_mod1)
-model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.INVEST.CORINE_man0_mod1 + (1|study_id), data = dat, na.action = na.omit)
-r.squaredGLMM(model)
-(p2<-ggplot(dat, aes(Lonsdorf.INVEST.CORINE_man0_mod1, ab_wild_comparable)) +
-    geom_point(size=2.5, shape=21,color = "black", aes(fill=factor(crop))) +
-    geom_smooth(method="lm", size=1, se=TRUE, color = "black", alpha=0.4) +
-    xlab("Predicted INVEST") +      
-    ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
-    theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
-    scale_fill_discrete(name="Crop") +  
-    theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
+
+
