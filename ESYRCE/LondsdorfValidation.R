@@ -6,6 +6,8 @@ library(nlme)
 library(ggplot2)
 library(dplyr)
 library(ggeffects)
+library(sjPlot)
+library(stargazer)
 
 # Model data repo
 model_repo = "C:/Users/angel/git/OBserv_models/"
@@ -30,11 +32,6 @@ modelCols = c("Lonsdorf.INVEST.CORINE_man0_mod0"  , "Lonsdorf.INVEST.CORINE_man0
               "Lonsdorf.ZonasNaturales_man0_mod0" , "Lonsdorf.ZonasNaturales_man0_mod1",   "Lonsdorf.ZonasNaturales_man1_mod0",  "Lonsdorf.ZonasNaturales_man1_mod1")
 df_data   = df_data %>% select(c(fieldCols,modelCols)) # select columns
 
-# Standardize units somehow
-sumCols                    = c("ab_bombus","ab_wildbees","ab_syrphids","ab_humbleflies", "ab_nonbee_hymenoptera") 
-df_data$ab_wild_comparable = rowSums(df_data[,sumCols]) / df_data$total_sampled_time
-df_data                    = df_data %>% group_by(study_id) %>% mutate(Zabundance = scale(ab_wild_comparable))
-
 #Explore
 boxplot(df_data$Zabundance ~ df_data$crop)
 hist(df_data$Zabundance)
@@ -55,13 +52,21 @@ hist(df_data$ab_wild_comparable)
 # SET DATA (EUROPE OR SPAIN) 
 #############################
 # SPAIN
-df_spain <- subset(df_data, country == "Spain")
+df_spain = subset(df_data, country == "Spain")
 dat = df_spain
-dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0) & !is.na(ab_wild_comparable))
+dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0))
 
 # EUROPE
 dat = df_data
-dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0) & !is.na(ab_wild_comparable))
+dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0))
+
+# Standardize units somehow
+sumCols                = c("ab_bombus","ab_wildbees","ab_syrphids","ab_humbleflies", "ab_nonbee_hymenoptera", "ab_lepidoptera") 
+dat                    = subset(dat, !is.na(ab_wildbees)) # at least abundance of wildbees must be measured 
+dat                    = subset(dat, !is.na(total_sampled_time)) # total sampled time needed 
+dat[,sumCols]          = dat[,sumCols] %>% mutate_if(is.numeric, ~replace(., is.na(.), 0))
+dat$ab_wild_comparable = rowSums(dat[,sumCols]) / dat$total_sampled_time
+dat                    = dat %>% group_by(study_id) %>% mutate(Zabundance = scale(ab_wild_comparable))
 
 ###############################
 # MODELS
@@ -84,10 +89,14 @@ r.squaredGLMM(model)
 model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.INVEST.CORINE_man0_mod1 + (1|study_id), data = dat, na.action = na.omit)
 r.squaredGLMM(model)
 
+# Z abundance
+model <- lme(Zabundance ~ Lonsdorf.INVEST.CORINE_man0_mod1, random = ~1|study_id, data = dat, na.action = na.omit)
+
+
 ##############################
 # PLOTS
 ##############################
-term = "Lonsdorf.ZonasNaturales_man0_mod1" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
+term = "Lonsdorf.INVEST.CORINE_man0_mod1" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
 # Predicted values
 pred.mm <- ggpredict(model, terms = term)  # this gives overall predictions for the model
 (ggplot(pred.mm) + 
@@ -114,5 +123,11 @@ scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.ZonasNaturales_man0_mod0)
     scale_fill_discrete(name="Crop") +  
     theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
 
-
-
+##############################
+# TABLES
+##############################
+tab_model(model)
+stargazer(model, type = "text",
+          +           digits = 3,
+          +           star.cutoffs = c(0.05, 0.01, 0.001),
+          +           digit.separator = "")
