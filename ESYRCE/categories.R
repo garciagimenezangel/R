@@ -230,18 +230,18 @@ pollImportant = c(essential, great, increaseBreeding, increaseSeedProd)
 pollNotImport = c(little, noIncrease)
 
 
-# Sanity check (columns categorized)
-for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
-                                     name %in% yield_landcovertypes | 
-                                     name %in% var_landcovertypes   |
-                                     name %in% soilMaint            |
-                                     name %in% sowTechn             |
-                                     name %in% avgSize              |
-                                     name %in% heterogen            |
-                                     name %in% demand               |
-                                     name %in% edges                |
-                                     name %in% irrigated            |
-                                     name %in% dry) {} else {print(name)} }
+# # Sanity check (columns categorized)
+# for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
+#                                      name %in% yield_landcovertypes | 
+#                                      name %in% var_landcovertypes   |
+#                                      name %in% soilMaint            |
+#                                      name %in% sowTechn             |
+#                                      name %in% avgSize              |
+#                                      name %in% heterogen            |
+#                                      name %in% demand               |
+#                                      name %in% edges                |
+#                                      name %in% irrigated            |
+#                                      name %in% dry) {} else {print(name)} }
 
 
 

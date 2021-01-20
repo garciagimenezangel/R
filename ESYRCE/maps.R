@@ -58,6 +58,17 @@ ggplot(sf_metricYears) +
   geom_sf(data = sf_metricYears, aes(fill = Seminatural))+
   facet_wrap(~YEA) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+# propAgri: agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery)
+baseCols                        = c("province", "region", "YEA")
+columns                         = paste0("prop_",agriLand)
+df_agriLand                     = df_dataYears[,c(baseCols,columns)]
+df_agriLand$agriLand            = rowSums(df_agriLand[,columns])
+df_metricYears = df_agriLand %>% group_by(YEA,province) %>% summarise(AgriLand=mean(agriLand, na.rm = TRUE))
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = AgriLand))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 # forested: seminatural = c(forested, otherWoodyCrop, pasture)
 baseCols                        = c("province", "region", "YEA")
 columns                         = paste0("prop_",forested)
@@ -164,6 +175,19 @@ ggplot(sf_slopeSeminatural) +
   geom_sf(data = sf_slopeSeminatural, aes(fill = Seminatural))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
+# propAgri
+baseCols                        = c("province", "region", "YEA")
+columns                         = paste0("prop_",agriLand)
+df_agriLand                     = df_data[,c(baseCols,columns)]
+df_agriLand$agriLand            = rowSums(df_agriLand[,columns])
+df_agriLand                     = df_agriLand %>% group_by(YEA, province) %>% summarise(agriLand=mean(agriLand, na.rm = TRUE))
+df_slopeAgriLand                = df_agriLand %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "agriLand")))
+df_slopeAgriLand$AgriLand       = df_slopeAgriLand$slope
+sf_slopeAgriLand                = merge(polys,df_slopeAgriLand)
+ggplot(sf_slopeAgriLand) +
+  geom_sf(data = sf_slopeAgriLand, aes(fill = AgriLand))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
 # propOther
 baseCols             = c("province", "region", "YEA")
 columns              = paste0("prop_",other)
@@ -211,7 +235,6 @@ sf_slopeMetric                 = merge(polys,df_slopeMetric)
 ggplot(sf_slopeMetric) +
   geom_sf(data = sf_slopeMetric, aes(fill = NotAgricultural))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
-
 
 # edgeDenSemiDiss
 df_edgeDenSeminat                             = df_data %>% group_by(YEA, province) %>% summarise(edgeDenSeminat=mean(edgeDenSemiDiss, na.rm = TRUE))
