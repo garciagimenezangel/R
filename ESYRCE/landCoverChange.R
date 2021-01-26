@@ -1,26 +1,74 @@
-# library(dplyr)
-# 
-# # Objetivo: sacar una tabla de probabilidades de cada posible transición entre clases. 
-# # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
-# # Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
-# 
-# setwd("C:/Users/angel/git/R/ESYRCE/")
-# source("./categories.R")
-# dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-# dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
-# df_data      = read.csv(dataFile, header=T)
+library(dplyr)
+
+# Objetivo: sacar una tabla de probabilidades de cada posible transición entre clases.
+# Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
+# Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
+
+setwd("C:/Users/angel/git/R/ESYRCE/")
+source("./categories.R")
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
+df_data      = read.csv(dataFile, header=T)
 
 ##############
 # METHOD 1
 ##############
+# Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
+df_LCtransitions = data.frame(matrix(0, ncol = length(landcovertypes), nrow = length(landcovertypes)))
+rownames(df_LCtransitions) = landcovertypes
+colnames(df_LCtransitions) = landcovertypes
+df_LCCP    = df_data[, c("D1_HUS", "D2_NUM", "YEA", "lccp1", "lccp2", "lccp3", "lccp4", "lccp5", "lccp6", "lccp7", "lccp8", "lccp9")]
+husOld     = df_LCprop[1, "D1_HUS"]
+numOld     = df_LCprop[1, "D2_NUM"]
+for (i in 2:nrow(df_LCCP)) {
+  husNew   = df_LCCP[i, "D1_HUS"]
+  numNew   = df_LCCP[i, "D2_NUM"]  
+  lccp1New = df_LCCP[i, "lccp1"] 
+  lccp2New = df_LCCP[i, "lccp2"] 
+  lccp3New = df_LCCP[i, "lccp3"] 
+  lccp4New = df_LCCP[i, "lccp4"] 
+  lccp5New = df_LCCP[i, "lccp5"] 
+  lccp6New = df_LCCP[i, "lccp6"] 
+  lccp7New = df_LCCP[i, "lccp7"] 
+  lccp8New = df_LCCP[i, "lccp8"] 
+  lccp9New = df_LCCP[i, "lccp9"] 
+  if (husNew == husOld & numNew == numOld) { 
+    # add up every transition observed (also if no change, i.e. the same lc types)
+    df_LCtransitions[lccp1Old, lccp1New] = df_LCtransitions[lccp1Old, lccp1New] + 1
+    df_LCtransitions[lccp2Old, lccp2New] = df_LCtransitions[lccp2Old, lccp2New] + 1
+    df_LCtransitions[lccp3Old, lccp3New] = df_LCtransitions[lccp3Old, lccp3New] + 1
+    df_LCtransitions[lccp4Old, lccp4New] = df_LCtransitions[lccp4Old, lccp4New] + 1
+    df_LCtransitions[lccp5Old, lccp5New] = df_LCtransitions[lccp5Old, lccp5New] + 1
+    df_LCtransitions[lccp6Old, lccp6New] = df_LCtransitions[lccp6Old, lccp6New] + 1
+    df_LCtransitions[lccp7Old, lccp7New] = df_LCtransitions[lccp7Old, lccp7New] + 1
+    df_LCtransitions[lccp8Old, lccp8New] = df_LCtransitions[lccp8Old, lccp8New] + 1
+    df_LCtransitions[lccp9Old, lccp9New] = df_LCtransitions[lccp9Old, lccp9New] + 1
+  }
+  else {
+    # do nothing, a new segment started
+  }
+  husOld   = husNew
+  numOld   = numNew
+  lccp1Old = lccp1New
+  lccp2Old = lccp2New
+  lccp3Old = lccp3New
+  lccp4Old = lccp4New
+  lccp5Old = lccp5New
+  lccp6Old = lccp6New
+  lccp7Old = lccp7New
+  lccp8Old = lccp8New
+  lccp9Old = lccp9New
+}
+
 
 ##############
 # METHOD 2
 ##############
+# Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
 df_LCtransitions = data.frame(matrix(0, ncol = length(landcovertypes), nrow = length(landcovertypes)))
 rownames(df_LCtransitions) = landcovertypes
 colnames(df_LCtransitions) = landcovertypes
-df_LCtransitionsOld = df_LCtransitions
+df_LCtransitionsOld = df_LCtransitions # use a copy to do sanity checks at every step
 
 df_LCprop = df_data[, c("D1_HUS", "D2_NUM", "YEA", "segAreaNoWater", prop_landcovertypes)]
 df_LCarea = df_LCprop[, prop_landcovertypes] * df_LCprop$segAreaNoWater
@@ -43,33 +91,34 @@ for (i in 2:nrow(df_LCprop)) {
       print(paste("Warning: gains not equal to loses in row:",i))
       print(paste("Difference:",sum(changeVector)))
     }
-    
-    # LC types according to change in extension
-    noChange = landcovertypes[df_LCarea[i-1,landcovertypes]>1e-3 & changeVector==0]  # there was some area of the lc type and no change
-    winners  = landcovertypes[changeVector>0]
-    losers   = landcovertypes[changeVector<0]
-    
-    # Set win/loss matrices
-    win  = matrix(changeVector[changeVector>0]) / sum(changeVector[changeVector>0])
-    loss = matrix(changeVector[changeVector<0]) 
-    rownames(win)  = winners
-    rownames(loss) = losers
-    
-    for (lcKept in c(noChange,winners)) {
-      df_LCtransitions[lcKept,lcKept] = df_LCtransitionsOld[lcKept,lcKept] + df_LCarea[i-1,lcKept] # add all the area that was already there, because no change or increased, so we assume all has been kept
-    }
-    for (lcLos in losers) {
-      df_LCtransitions[lcLos,lcLos] = df_LCtransitionsOld[lcLos,lcLos] + df_LCarea[i,lcLos] # add the area that remains
-      # Find the total share of the loss for each winner
-      totalLoss = -changeVector[,lcLos]
-      for (lcWin in winners) {
-        df_LCtransitions[lcLos,lcWin] = df_LCtransitionsOld[lcLos,lcWin] + totalLoss*win[lcWin,]
+    else {
+      # LC types according to change in extension
+      noChange = landcovertypes[df_LCarea[i-1,landcovertypes]>1e-3 & changeVector==0]  # there was some area of the lc type and no change
+      winners  = landcovertypes[changeVector>0]
+      losers   = landcovertypes[changeVector<0]
+      
+      # Set win/loss matrices
+      win  = matrix(changeVector[changeVector>0]) / sum(changeVector[changeVector>0])
+      loss = matrix(changeVector[changeVector<0]) 
+      rownames(win)  = winners
+      rownames(loss) = losers
+      
+      for (lcKept in c(noChange,winners)) {
+        df_LCtransitions[lcKept,lcKept] = df_LCtransitionsOld[lcKept,lcKept] + df_LCarea[i-1,lcKept] # add all the area that was already there, because no change or increased, so we assume all has been kept
       }
-    }
-    # Sanity check
-    for (loser in losers){
-      testSums = rowSums(df_LCtransitions[loser,] - df_LCtransitionsOld[loser,])
-      if( all(abs(df_LCarea[i-1,loser] - testSums) > 1e-3) ) print(paste("Warning: area lost not well distributed among winners:",i))
+      for (lcLos in losers) {
+        df_LCtransitions[lcLos,lcLos] = df_LCtransitionsOld[lcLos,lcLos] + df_LCarea[i,lcLos] # add the area that remains
+        # Find the total share of the loss for each winner
+        totalLoss = -changeVector[,lcLos]
+        for (lcWin in winners) {
+          df_LCtransitions[lcLos,lcWin] = df_LCtransitionsOld[lcLos,lcWin] + totalLoss*win[lcWin,]
+        }
+      }
+      # Sanity check
+      for (loser in losers){
+        testSums = rowSums(df_LCtransitions[loser,] - df_LCtransitionsOld[loser,])
+        if( all(abs(df_LCarea[i-1,loser] - testSums) > 1e-3) ) print(paste("Warning: area lost not well distributed among winners:",i))
+      }
     }
   }
   else {
