@@ -11,7 +11,7 @@ source("./categories.R")
 source("./functions.R")
 
 # Read datasets
-dataFolder   = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
+dataFolder   = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
 df_data      = read.csv(dataFile, header=T)
 df_data$region   = abbreviate(df_data$region)
@@ -19,6 +19,37 @@ df_data$province = abbreviate(df_data$province)
 modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
+
+##########################
+# INTENSIFICATION METRICS
+##########################
+# crop cover
+columns     = paste0("prop_",agriLand)
+df_aux      = df_data[,columns]
+cropCover   = rowSums(df_aux)
+stCropCover = scale(cropCover)
+hist(stCropCover)
+summary(stCropCover)
+# crop field size 
+columns     = "avgFieldSize"
+fieldSize   = df_data[,columns]
+stFieldSize = scale(fieldSize)
+hist(stFieldSize)
+summary(stFieldSize)
+# crop diversity
+columns     = "heterogeneity"
+diversity   = -df_data[,columns] # change sign to go along with intensification
+stDiversity = scale(diversity)
+hist(stDiversity)
+summary(stDiversity)
+# INTENSIFICATION
+intensification = stCropCover + stFieldSize + stDiversity
+hist(intensification)
+summary(intensification)
+
+# Save as a new column:
+df_data$intensification = intensification
+write.csv(df_data, file=paste0(dataFolder,"geo_metrics_climate_intensif_20-12-18.csv"),row.names=FALSE)
 
 #############################################################################
 # YIELD vs INTENSIFICATION (grouped by level of pollinators' dependence) 

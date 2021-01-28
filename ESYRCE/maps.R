@@ -138,6 +138,13 @@ ggplot(sf_metricYears) +
   geom_sf(data = sf_metricYears, aes(fill = Demand))+
   facet_wrap(~YEA) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+# intensification
+df_metricYears = df_dataYears %>% group_by(YEA,province) %>% summarise(Intensif=mean(intensification, na.rm = TRUE))
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = Intensif))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 # pollScore
 df_metricYears = df_pollYears %>% group_by(YEA,province) %>% summarise(PollinatorScore=mean(ZonasNaturales_man0_mod0, na.rm = TRUE))
 sf_metricYears = merge(polys,df_metricYears)
@@ -263,13 +270,22 @@ ggplot(sf_slopeDiversity) +
   geom_sf(data = sf_slopeDiversity, aes(fill = CropDiversity))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
-# heterogeneity
+# demand
 df_metric             = df_data %>% group_by(YEA, province) %>% summarise(demand=mean(demand, na.rm = TRUE))
 df_slopeMetric        = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "demand")))
 df_slopeMetric$Demand = df_slopeMetric$slope
 sf_slopeMetric        = merge(polys,df_slopeMetric)
 ggplot(sf_slopeMetric) +
   geom_sf(data = sf_slopeMetric, aes(fill = Demand))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# intensification
+df_metric               = df_data %>% group_by(YEA, province) %>% summarise(intensif=mean(intensification, na.rm = TRUE))
+df_slopeMetric          = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "intensif")))
+df_slopeMetric$Intensif = df_slopeMetric$slope
+sf_slopeMetric          = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = Intensif))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
 # Pollination score
