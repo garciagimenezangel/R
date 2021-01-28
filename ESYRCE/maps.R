@@ -1,7 +1,7 @@
 library(dplyr)
 library(gstat) 
 library(sf)
-rm(list=ls())
+# rm(list=ls())
 ###########
 setwd("C:/Users/angel/git/R/ESYRCE/")
 
@@ -11,7 +11,7 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
@@ -151,6 +151,17 @@ sf_metricYears = merge(polys,df_metricYears)
 ggplot(sf_metricYears) +
   geom_sf(data = sf_metricYears, aes(fill = PollinatorScore))+
   facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# Particular crops area
+df_crops = read.csv(paste0(dataFolder,"cropAreaByProvince.csv"), header=T)
+years = seq(2001,2019)
+crops = cerealGrain
+df_crops$area_crop = rowSums(df_crops[,paste0("area_",crops)])
+df_cropsYears = df_crops[df_crops$YEA %in% years,] %>% group_by(province) %>% summarise(sum_crop=sum(area_crop, na.rm = TRUE))
+sf_metricYears = merge(polys,df_cropsYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = sum_crop))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
 

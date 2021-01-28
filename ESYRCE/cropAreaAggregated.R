@@ -31,7 +31,6 @@ for (crop in agriLand) {
 
 write.csv(df_crops, file=paste0(dataFolder,"cropAreaByProvince.csv"),row.names=FALSE)
 
-
 ###########
 # Com.Aut.
 ###########
@@ -48,4 +47,6 @@ for (crop in agriLand) {
 }
 
 write.csv(df_crops, file=paste0(dataFolder,"cropAreaByComAut.csv"),row.names=FALSE)
+
+
 
