@@ -1,36 +1,10 @@
-# 
-# The configuration files in this folder must contain the following options:
 
 # Main settings (normally, the only ones that should change among configuration files for different species)
 species = "Lasioglossum malachurum"
 otherNames = c("Lasioglossum_ malachurum", "Lasioglossum_malachurum", "Lasioglossum.malachurum")  # other names of the species in the OBServ database. See "OBservData\Thesaurus_Pollinators\organism_guild_META_STUDIES.csv"
-yrFrom  = 1988
-yrTo    = 2100
 excludeNames = c("Lasioglossum", "Lasioglossum sp", "Lasioglossum sp.", "Lasioglossum Sp.", "Lasioglossum sp. ", "Lasioglossum (Evylaeus) sp.", "Lasioglossum Evylaeus sp. E", "Lasioglossum Evylaeus sp. F", "Lasioglossum_sp", "Lasioglossum_sp_cf_", "Lasioglossum_sp_cf_Carvalheirodataset", "Lasioglossum_ albipes/calceatum", "Lasioglossum_ spec.", "Lasioglossum sp1", "Lasioglossum_10", "Lasioglossum_11", "Lasioglossum_14", "Lasioglossum_8", "Lasioglossum_9", "Lasiolgossum sp. 3", "Halictus/Lasioglossum_ spec.", "Lasioglossum (Dialictus) sp. Ba", "Lasioglossum (Dialictus) sp. C", "Lasioglossum (Dialictus) sp. D", "Lasioglossum (Dialictus) sp. E", "Lasioglossum (Dialictus) spp.", "Lasioglossum (Dialictus) ssp.", "Lasioglossum (Evylaeus) sp. AS-E1", "Lasioglossum (Evylaeus) sp. B", "Lasioglossum (Evylaeus) sp. C", "Lasioglossum (Evylaeus) sp. E", "Lasioglossum (Evylaeus) sp. I", "Lasioglossum (Evylaeus) sp. R", "Lasioglossum (Evylaeus) spp.", "Lasioglossum (Evylaeus) ssp.", "Lasioglossum dialictus sp.", "Lasioglossum dialictus sp. TX 16", "Lasioglossum sp. 1", "Lasioglossum sp. 10", "Lasioglossum sp. 11", "Lasioglossum sp. 13", "Lasioglossum sp. 14", "Lasioglossum sp. 14f", "Lasioglossum sp. 16f", "Lasioglossum sp. 18f", "Lasioglossum sp. 2", "Lasioglossum sp. 20", "Lasioglossum sp. 24m", "Lasioglossum sp. 26f", "Lasioglossum sp. 3", "Lasioglossum sp. 36f", "Lasioglossum sp. 4", "Lasioglossum spp.", "Lasioglossum ssp.") # any pollinator name equal to these strings is not considered as a candidate absence point
 gbifReady       = FALSE   # TRUE: gbif df already calculated and saved
 observReady     = FALSE  # TRUE: observ df already calculated and saved
 locatReady      = FALSE  # TRUE: locations df already calculated and saved
 featuresReady   = FALSE  # TRUE: features df already calculated and saved
 useRasters      = FALSE  # TRUE: use collection of rasters to extract features 
-
-# Directories
-observDir  = "C:/Users/angel.gimenez/Documents/REPOSITORIES/OBservData/Datasets_storage"
-sdmDir     = "C:/Users/angel.gimenez/Documents/DATA/OBServ/SDMs/"
-speciesDir = paste0(gsub(" ","_",species), "/")
-dataDir    = paste0(sdmDir, speciesDir);  
-dir.create(file.path(sdmDir, speciesDir), showWarnings = FALSE)
-featDir    = paste0(dataDir, "features/");
-histoDir   = paste0(dataDir, "histograms/");
-rastersDir = paste0(sdmDir, "rasters/");
-
-# Other settings
-csvGbif         = "gbifData.csv"
-csvObservInsect = "observInsectData.csv"
-csvObservField  = "observFieldData.csv"
-csvLocations    = "locations.csv"
-csvFeatures     = "features.csv"
-timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo))
-coordsDigits    = 4
-minCoordDig     = 3
-removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
-###############################

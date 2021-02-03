@@ -53,7 +53,8 @@ pollScore = apply(df_data[!lowDemand,], 1, FUN = getPollScore)
 df_data[!lowDemand,"pollScore"] = pollScore
 
 # Get value of the service
-df_data$pollService = df_data$pollScore - df_data$demand
+df_data$pollService = 0
+df_data[!lowDemand, "pollService"] = df_data[!lowDemand, "pollScore"] - df_data[!lowDemand,"demand"]
 
 # Save data 
 write.csv(df_data, file=paste0(dataFolder, "geo_metrics_climate_intensif_pollService_20-12-18.csv"), row.names=FALSE)

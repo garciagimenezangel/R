@@ -8,7 +8,7 @@
 ###############################
 # Load libraries and set WD
 rm(list=ls())
-setwd("C:/Users/angel.gimenez/Documents/REPOSITORIES/R/SDMs/")
+setwd("C:/Users/angel.gimenez/git/R/SDMs/")
 source("lib/dataFunctions.R")
 library(maptools)
 library(dplyr)
@@ -17,7 +17,8 @@ library(RWeka)
 library(rlist)
 
 # Load species configuration
-source("config_species/lasioglossum_morio")
+source("config_species/commonSettings.R")
+source("config_species/bombus_pratorum.R")
 
 ###############################
 # Load GBIF data: presence-only
@@ -29,7 +30,7 @@ if (gbifReady) {
   write.csv(dfGbif, paste0(dataDir, csvGbif), row.names=FALSE)
 }
 
-# Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
+ # Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
 if (observReady) {
   dfOBServInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
   dfOBServFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)
