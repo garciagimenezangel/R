@@ -11,8 +11,10 @@ library(sjPlot)
 library(stargazer)
 
 # Model data repo
-model_repo = "C:/Users/angel/git/OBserv_models/"
-data_repo  = "C:/Users/angel/git/OBServData/"
+# model_repo = "C:/Users/angel/git/OBserv_models/"
+# data_repo  = "C:/Users/angel/git/OBServData/"
+model_repo = "C:/Users/angel.gimenez/git/OBserv_models/"
+data_repo  = "C:/Users/angel.gimenez/git/OBServData/"
 
 #Read data----
 modelData = read.csv(paste0(model_repo, "data/model_data.csv"), header = TRUE) %>% dplyr::select(-c("latitude","longitude"))

@@ -7,11 +7,13 @@ library(reshape2)
 # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
 # Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
 
-setwd("C:/Users/angel/git/R/ESYRCE/")
+# setwd("C:/Users/angel/git/R/ESYRCE/")
+setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
 source("./categories.R")
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+# dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
-dataFile     = paste0(dataFolder, "landCoverTransitions.csv")
+dataFile     = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
 df_data      = read.csv(dataFile, header=T)
 
 ##############
@@ -139,24 +141,40 @@ for (lc in landcovertypes) {
 ############################
 # BY GROUP OF LANDCOVER
 ############################
-groups = list(c("cerealGrain",cerealGrain),
-              c("legumeGrain",legumeGrain), 
-              c("tuber",tuber), 
-              c("industrial",industrial), 
-              c("fodder",fodder), 
-              c("vegetable",vegetable), 
-              c("orchard",orchard), 
-              c("ornamental",ornamental), 
-              c("citric",citric), 
-              c("fruitNoCitric",fruitNoCitric), 
-              c("vineyard",vineyard), 
-              c("oliveTrees",oliveTrees), 
-              c("nursery",nursery), 
-              c("forested",c(forested,otherWoodyCrop)), 
-              c("pasture",pasture), 
-              c("fallow",other), 
-              c("improductive",improductive), 
-              c("notAgri",notAgri))
+# groups = list(c("cerealGrain",cerealGrain),
+#               c("legumeGrain",legumeGrain),
+#               c("tuber",tuber),
+#               c("industrial",industrial),
+#               c("fodder",fodder),
+#               c("vegetable",vegetable),
+#               c("orchard",orchard),
+#               c("ornamental",ornamental),
+#               c("citric",citric),
+#               c("fruitNoCitric",fruitNoCitric),
+#               c("vineyard",vineyard),
+#               c("oliveTrees",oliveTrees),
+#               c("nursery",nursery),
+#               c("forested",c(forested,otherWoodyCrop)),
+#               c("pasture",pasture),
+#               c("fallow",other),
+#               c("improductive",improductive),
+#               c("notAgri",notAgri))
+# groups = list(c("Agri Land",agriLand),
+#               c("Forested",c(forested,otherWoodyCrop)),
+#               c("Pasture",pasture),
+#               #c("Fallow",c('fallow','emptyGreenh','posio','wasteland','spartizal')),
+#               c("Abandoned",c('abandoned')),
+#               c("Improductive",improductive),
+#               c("Artificial",notAgri))
+groups = list(c("Poll-dep crops",pollImportant),
+              c("Poll-indep crops",pollNotImport),
+              c("Forested",c(forested,otherWoodyCrop)),
+              c("Pasture",pasture),
+              #c("Fallow",c('fallow','emptyGreenh','posio','wasteland','spartizal')),
+              c("Abandoned",c('abandoned')),
+              c("Improductive",improductive),
+              c("Artificial",notAgri))
+
 # If method 1, add water and other:
 # groups = list.append(groups,c("water",c("water")),c("other",c("other"))) 
 df_LCtransitions_groups = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
@@ -183,19 +201,26 @@ for (group in rownames(df_LCtransitions_groups)) {
 # PLOTS
 ############
 # If we want to see where landcovers come from, instead of where they go, transpose df:
-df_LCtransitions_groups_norm_tr = as.data.frame(t(df_LCtransitions_groups_norm))
-df_melt = melt(as.matrix(df_LCtransitions_groups_norm_tr))
+transpose = FALSE
+removeNoTransition = TRUE
+abbreviateNames = FALSE 
+df_LCtransitions_groups_norm_aux = df_LCtransitions_groups_norm
+if (transpose) df_LCtransitions_groups_norm_aux = t(df_LCtransitions_groups_norm_aux)
+df_melt = melt(as.matrix(df_LCtransitions_groups_norm_aux))
 colnames(df_melt) = c("origin","final","value")
-df_melt$origin = abbreviate(df_melt$origin)
-df_melt$final  = abbreviate(df_melt$final)
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
 # All groups
-(p1<-ggplot(data=df_melt, aes(x=final, y=value)) +
-  geom_bar(stat="identity")) + 
-  ggtitle("Transitions") +
-  facet_wrap(~origin)
+# (p1<-ggplot(data=df_melt, aes(x=final, y=value)) +
+#   geom_bar(stat="identity")) + 
+#   ggtitle("Transitions") +
+#   facet_wrap(~origin)
 # One group
-target = "ntAg"
-title = "Not Agri origin, method 2"
+target = "Poll-indep crops"
+title = "Poll-indep crops destination"
 df_melt_sel = df_melt[df_melt$origin == target,]
 (p2<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
     geom_bar(stat="identity") + 

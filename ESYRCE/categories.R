@@ -210,7 +210,7 @@ var_landcovertypes   = paste0("var_",landcovertypes)
 # Levels of pollinators' dependence
 essential = c('pumpkin','zucchini','melon','watermelon','cherimoya','kiwi')
 great     = c('turnipFodder','cucumber','apple','pear','loquat','apricot','cherry','peach','plum','avocado','mango','almond','redRaspberry')
-modest    = c('soybean','rapeseed','industTomato','capsicumPaprika','eggplant','strawberry','broadBean','fig','pomegranate','chestnut',
+modest    = c('sunflower','soybean','rapeseed','industTomato','capsicumPaprika','eggplant','strawberry','broadBean','fig','pomegranate','chestnut',
               'orchard')
 little    = c('flax','peanut','safflower','tomato','orange','clementine','lemon',       
               'bitterOrange','grapefruit','otherCitrics','persimmon','papaya')
@@ -226,11 +226,11 @@ increaseBreeding = c('potato','sweetPotato','garlic','banana','pineapple')
 increaseSeedProd = c('tobacco','alfalfa','vetchFodder', 'artichoke','celery','onion','broccoli','cabbage','cauliflower','endive','aspargus',
                      'redCabbage','leek','carrot')
 
-pollImportant = c(essential, great, increaseBreeding, increaseSeedProd)
+pollImportant = c(modest, essential, great, increase, increaseBreeding, increaseSeedProd)
 pollNotImport = c(little, noIncrease)
 
-
 # # Sanity check (columns categorized)
+# landcovertypes[!(landcovertypes %in% c(pollImportant, pollNotImport, unknown))]
 # for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
 #                                      name %in% yield_landcovertypes | 
 #                                      name %in% var_landcovertypes   |

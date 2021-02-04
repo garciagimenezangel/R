@@ -3,7 +3,9 @@ library(gstat)
 library(sf)
 # rm(list=ls())
 ###########
-setwd("C:/Users/angel/git/R/ESYRCE/")
+
+setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
+# setwd("C:/Users/angel/git/R/ESYRCE/")
 
 # Organize categories
 source("./categories.R")
@@ -11,8 +13,10 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
+dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
+GEEFolder  = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
+# dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+# GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
 dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
@@ -21,7 +25,7 @@ modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
 # Regions
-fileShp = "C:/Users/angel/DATA/Administrative areas/ESP_adm/ESP_adm2.shp"
+fileShp = "C:/Users/angel.gimenez/DATA/Administrative areas/ESP_adm/ESP_adm2.shp"
 
 polys <- st_read(fileShp)
 # Crop to peninsula and Baleares
@@ -98,7 +102,7 @@ ggplot(sf_metricYears) +
   geom_sf(data = sf_metricYears, aes(fill = NotAgri))+
   facet_wrap(~YEA) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
-# other (~abandoned)
+# other ->c('fallow','emptyGreenh','posio','wasteland','spartizal','abandoned')
 baseCols                        = c("province", "region", "YEA")
 columns                         = paste0("prop_",other)
 df_other                        = df_dataYears[,c(baseCols,columns)]
@@ -107,6 +111,53 @@ df_metricYears = df_other %>% group_by(YEA,province) %>% summarise(Other=mean(ot
 sf_metricYears = merge(polys,df_metricYears)
 ggplot(sf_metricYears) +
   geom_sf(data = sf_metricYears, aes(fill = Other))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+# pollImportant 
+baseCols                        = c("province", "region", "YEA")
+columns                         = paste0("prop_",pollImportant)
+df_other                        = df_dataYears[,c(baseCols,columns)]
+df_other$pollDepCrops           = rowSums(df_other[,columns])
+df_metricYears = df_other %>% group_by(YEA,province) %>% summarise(PollDepCrops=mean(pollDepCrops, na.rm = TRUE))
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = PollDepCrops))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+# pollNotImportant 
+baseCols                        = c("province", "region", "YEA")
+columns                         = paste0("prop_",pollNotImport)
+df_other                        = df_dataYears[,c(baseCols,columns)]
+df_other$pollIndepCrops         = rowSums(df_other[,columns])
+df_metricYears = df_other %>% group_by(YEA,province) %>% summarise(PollIndepCrops=mean(pollIndepCrops, na.rm = TRUE))
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = PollIndepCrops))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+# pollImportant/pollNotImportant
+baseCols                        = c("province", "region", "YEA")
+columns1                        = paste0("prop_",pollNotImport)
+columns2                        = paste0("prop_",pollImportant)
+df_other                        = df_dataYears[,c(baseCols,columns1,columns2)]
+df_other$pollIndepCrops         = rowSums(df_other[,columns1])
+df_other$pollDepCrops           = rowSums(df_other[,columns2])
+df_metricYears = df_other %>% group_by(YEA,province) %>% summarise(PollIndepCrops=mean(pollIndepCrops, na.rm = TRUE), PollDepCrops=mean(pollDepCrops, na.rm = TRUE))
+df_metricYears$ratioIndepDepCrops = df_metricYears$PollIndepCrops/df_metricYears$PollDepCrops
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = ratioIndepDepCrops))+
+  facet_wrap(~YEA) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# abandoned
+baseCols                        = c("province", "region", "YEA")
+columns                         = c("prop_abandoned")
+df_other                        = df_dataYears[,c(baseCols,columns)]
+df_metricYears = df_other %>% group_by(YEA,province) %>% summarise(Abandoned=mean(prop_abandoned, na.rm = TRUE))
+sf_metricYears = merge(polys,df_metricYears)
+ggplot(sf_metricYears) +
+  geom_sf(data = sf_metricYears, aes(fill = Abandoned))+
   facet_wrap(~YEA) +
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
@@ -156,8 +207,9 @@ ggplot(sf_metricYears) +
 # Particular crops area
 df_crops = read.csv(paste0(dataFolder,"cropAreaByProvince.csv"), header=T)
 years = seq(2001,2019)
-crops = cerealGrain
-df_crops$area_crop = rowSums(df_crops[,paste0("area_",crops)])
+crops = pollImportant[pollImportant %in% agriLand]
+df_crops$area_crop = rowSums(df_crops[,paste0("area_",crops)]) # several columns
+# df_crops$area_crop = df_crops[,paste0("area_",crops)] # one column
 df_cropsYears = df_crops[df_crops$YEA %in% years,] %>% group_by(province) %>% summarise(sum_crop=sum(area_crop, na.rm = TRUE))
 sf_metricYears = merge(polys,df_cropsYears)
 ggplot(sf_metricYears) +
@@ -245,6 +297,75 @@ ggplot(sf_slopeMetric) +
   geom_sf(data = sf_slopeMetric, aes(fill = Pasture))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
+# industrial
+baseCols             = c("province", "region", "YEA")
+columns              = paste0("prop_",industrial)
+df_metric            = df_data[,c(baseCols,columns)]
+df_metric$industrial    = rowSums(df_metric[,columns])
+df_metric            = df_metric %>% group_by(YEA, province) %>% summarise(propIndustrial=mean(industrial, na.rm = TRUE))
+df_slopeMetric       = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "propIndustrial")))
+df_slopeMetric$Industrial = df_slopeMetric$slope
+sf_slopeMetric       = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = Industrial))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# pollImportant
+baseCols             = c("province", "region", "YEA")
+columns              = paste0("prop_",pollImportant)
+df_metric            = df_data[,c(baseCols,columns)]
+df_metric$pollDepCrop= rowSums(df_metric[,columns])
+df_metric            = df_metric %>% group_by(YEA, province) %>% summarise(pollDepCrop=mean(pollDepCrop, na.rm = TRUE))
+df_slopeMetric       = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "pollDepCrop")))
+df_slopeMetric$PollDepCrop = df_slopeMetric$slope
+sf_slopeMetric       = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = PollDepCrop))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# pollNotImportant
+baseCols             = c("province", "region", "YEA")
+columns              = paste0("prop_",pollNotImport)
+df_metric            = df_data[,c(baseCols,columns)]
+df_metric$pollIndepCrops = rowSums(df_metric[,columns])
+df_metric            = df_metric %>% group_by(YEA, province) %>% summarise(pollIndepCrops=mean(pollIndepCrops, na.rm = TRUE))
+df_slopeMetric       = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "pollIndepCrops")))
+df_slopeMetric$PollIndepCrops = df_slopeMetric$slope
+sf_slopeMetric       = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = PollIndepCrops))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# pollNotImportant/pollImportant
+baseCols             = c("province", "region", "YEA")
+columns1             = paste0("prop_",pollImportant)
+columns2             = paste0("prop_",pollNotImport)
+df_metric            = df_data[,c(baseCols,c(columns1,columns2))]
+df_metric$pollDepCrops  = rowSums(df_metric[,columns1])
+df_metric$pollIndepCrops= rowSums(df_metric[,columns2])
+df_metric            = df_metric %>% group_by(YEA, province) %>% summarise(pollDepCrops=mean(pollDepCrops, na.rm = TRUE),pollIndepCrops=mean(pollIndepCrops, na.rm = TRUE))
+df_metric$ratioIndepDepCrops = df_metric$pollIndepCrops / df_metric$pollDepCrops
+df_slopeMetric       = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "ratioIndepDepCrops")))
+df_slopeMetric$RatioIndepDepCrops = df_slopeMetric$slope
+sf_slopeMetric       = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = RatioIndepDepCrops))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+  
+# Agri with unknown dependence on pollinators
+baseCols             = c("province", "region", "YEA")
+columns              = paste0("prop_",agriLand[!(agriLand %in% c(pollImportant,pollNotImport)) ])
+df_metric            = df_data[,c(baseCols,columns)]
+df_metric$unknown    = rowSums(df_metric[,columns])
+df_metric            = df_metric %>% group_by(YEA, province) %>% summarise(unknown=mean(unknown, na.rm = TRUE))
+df_slopeMetric       = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "unknown")))
+df_slopeMetric$Unknown = df_slopeMetric$slope
+sf_slopeMetric       = merge(polys,df_slopeMetric)
+ggplot(sf_slopeMetric) +
+  geom_sf(data = sf_slopeMetric, aes(fill = Unknown))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
 # propNotAgri
 df_metric                      = df_data %>% group_by(YEA, province) %>% summarise(propNotAgri=mean(prop_notAgri, na.rm = TRUE))
 df_slopeMetric                 = df_metric %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "propNotAgri")))
@@ -270,6 +391,15 @@ df_slopeAvgSeminatSize$SeminaturalSize = df_slopeAvgSeminatSize$slope
 sf_slopeAvgSeminatSize                 = merge(polys,df_slopeAvgSeminatSize)
 ggplot(sf_slopeAvgSeminatSize) +
   geom_sf(data = sf_slopeAvgSeminatSize, aes(fill = SeminaturalSize))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
+
+# abandoned
+df_abandoned                    = df_data %>% group_by(YEA, province) %>% summarise(abandoned=mean(prop_abandoned, na.rm = TRUE))
+df_slopeAbandoned               = df_abandoned %>% group_by(province) %>% do(data.frame(calculateSlopeOnecolumn(., "abandoned")))
+df_slopeAbandoned$Abandoned     = df_slopeAbandoned$slope
+sf_slopeAbandoned               = merge(polys,df_slopeAbandoned)
+ggplot(sf_slopeAbandoned) +
+  geom_sf(data = sf_slopeAbandoned, aes(fill = Abandoned))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0)
 
 # heterogeneity
