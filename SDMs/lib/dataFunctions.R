@@ -5,6 +5,7 @@ library(rgeos)
 library(sp)
 library(stringr)
 library(rlist)
+library(raster)
 
 downloadGbifData <- function(species, timespan) {
   pars = c(timeSpan)  # use dismo syntax for query
@@ -16,7 +17,7 @@ downloadGbifData <- function(species, timespan) {
 
 getOBServInsectSampling <- function(observDir){
   observFiles = list.files(observDir, full.names = TRUE, pattern = "\\.csv$", recursive = FALSE)
-  indInsectSampling = lapply(observFiles, function(x){grepl("insect_sampling",x)})
+  indInsectSampling = lapply(observFiles, function(x){grepl("sampling",x)})
   indInsectSampling = unlist(indInsectSampling)
   fsInsectSampling  = observFiles[indInsectSampling]
   dfInsectSampling  = do.call(rbind, lapply(fsInsectSampling, function(file){ read.csv(file = file, header = TRUE) }))
@@ -76,23 +77,22 @@ getAbsenceData <- function(dfPresence, dfOBServInsectSampling, dfOBServFieldData
   names(dfAbsence)[names(dfAbsence) == "longitude"] <- "lon"
   names(dfAbsence)[names(dfAbsence) == "latitude"]  <- "lat"
   dfAbsence["presence"]  = rep(0, nrow(dfAbsence))
-  
+  # Remove NA and duplicated locations
+  dfAbsence = dfAbsence[!is.na(dfAbsence$lat) & !is.na(dfAbsence$lon),]
+  dfAbsence = dfAbsence[!duplicated(dfAbsence[c("lon","lat")]),]
   # Tag origin of the points 
   dfAbsence$source = replicate(nrow(dfAbsence),"OBServ")
   
   # Take points within the convex hull of the presence points, buffered 1 degree
-  conHull   = convHull(dfPresence[c("lon","lat")])
-  conHull   = buffer(polygons(conHull),width=1)
+  circleHull   = circleHull(dfPresence[c("lon","lat")])
+  circleHull   = buffer(polygons(circleHull),width=1)
   absPoints = SpatialPoints(cbind(dfAbsence$lon, dfAbsence$lat))
   inConHull = array()
   for(i in seq(1:length(absPoints))) {
-    inConHull[i] = gContains(conHull, absPoints[i])
+    inConHull[i] = gContains(circleHull, absPoints[i])
   }
   dfAbsence = dfAbsence[inConHull,]
   
-  # Remove NA and duplicated locations
-  dfAbsence = dfAbsence[!is.na(dfAbsence$lat) & !is.na(dfAbsence$lon),]
-  dfAbsence = dfAbsence[!duplicated(dfAbsence[c("lon","lat")]),]
   return(dfAbsence)
 }
 

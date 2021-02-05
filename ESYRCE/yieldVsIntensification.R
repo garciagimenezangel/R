@@ -247,8 +247,8 @@ zScoreLittle = merge(zScoreLittle,df_intenIndex,all.x=TRUE)
 reg=lm(z_meanYield~intenIndex, zScoreLittle)
 summary(reg)$r.squared
 
-# IMPORTANT
-zScoreImportant = zScore[zScore$crop %in% pollImportant,]
+# DEPENDENT
+zScoreImportant = zScore[zScore$crop %in% pollDependent,]
 zScoreImportant = merge(zScoreImportant,df_intenIndex,all.x=TRUE)
 (pl_intens<-ggplot(zScoreImportant, aes(intenIndex, z_meanYield)) +
     geom_point()+ 
@@ -256,8 +256,8 @@ zScoreImportant = merge(zScoreImportant,df_intenIndex,all.x=TRUE)
 reg=lm(z_meanYield~intenIndex, zScoreImportant)
 summary(reg)$r.squared
 
-# NOT IMPORTANT
-zScoreNotImport = zScore[zScore$crop %in% pollNotImport,]
+# NOT DEPENDENT
+zScoreNotImport = zScore[zScore$crop %in% pollNotDepent,]
 zScoreNotImport = merge(zScoreNotImport,df_intenIndex,all.x=TRUE)
 (pl_intens<-ggplot(zScoreNotImport, aes(intenIndex, z_meanYield)) +
     geom_point()+ 

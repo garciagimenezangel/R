@@ -7,11 +7,11 @@ library(reshape2)
 # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
 # Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
 
-# setwd("C:/Users/angel/git/R/ESYRCE/")
-setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
+setwd("C:/Users/angel/git/R/ESYRCE/")
+# setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
 source("./categories.R")
-# dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+# dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
 dataFile     = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
 df_data      = read.csv(dataFile, header=T)
@@ -132,10 +132,18 @@ for (i in 2:nrow(df_LCprop)) {
 ############################
 # NORMALIZED TRANSITIONS
 ############################
-# Normalized transitions can be read, at each row, as the probability of transition from the row lc type, to the columns land cover types.
-df_LCtransitions_norm = df_LCtransitions*0
+df_LCdestin = df_LCtransitions
+df_LCorigin = as.data.frame(t(df_LCdestin))
+# Normalized transitions can be read, at each row, as the probability of transition from the row lc type, to the columns land cover types -> destination probability
+# If df_LCtransitions is transposed, the normalization yields the probability of transition to the row lc type, from the columns land cover types -> origin probability
+df_LCdestin_prob = df_LCdestin*0
 for (lc in landcovertypes) {
-  if (rowSums(df_LCtransitions[lc,]) > 0) df_LCtransitions_norm[lc, ] = df_LCtransitions[lc, ] /  rowSums(df_LCtransitions[lc,])
+  if (rowSums(df_LCdestin[lc,]) > 0) df_LCdestin_prob[lc, ] = df_LCdestin[lc, ] /  rowSums(df_LCdestin[lc,])
+}
+df_LCtransitions_t = as.data.frame(t(df_LCtransitions))
+df_LCorigin_prob = df_LCorigin*0
+for (lc in landcovertypes) {
+  if (rowSums(df_LCorigin[lc,]) > 0) df_LCorigin_prob[lc, ] = df_LCorigin[lc, ] /  rowSums(df_LCorigin[lc,])
 }
 
 ############################
@@ -159,27 +167,32 @@ for (lc in landcovertypes) {
 #               c("fallow",other),
 #               c("improductive",improductive),
 #               c("notAgri",notAgri))
-# groups = list(c("Agri Land",agriLand),
-#               c("Forested",c(forested,otherWoodyCrop)),
-#               c("Pasture",pasture),
-#               #c("Fallow",c('fallow','emptyGreenh','posio','wasteland','spartizal')),
-#               c("Abandoned",c('abandoned')),
-#               c("Improductive",improductive),
-#               c("Artificial",notAgri))
-groups = list(c("Poll-dep crops",pollImportant),
-              c("Poll-indep crops",pollNotImport),
+groups = list(c("Agri Land",agriLand),
               c("Forested",c(forested,otherWoodyCrop)),
               c("Pasture",pasture),
-              #c("Fallow",c('fallow','emptyGreenh','posio','wasteland','spartizal')),
-              c("Abandoned",c('abandoned')),
+              c("Abandoned",abandAgri),
               c("Improductive",improductive),
               c("Artificial",notAgri))
+# groups = list(c("Poll-dep",pollDependent),
+#               c("Poll-indep",pollNotDepent),
+#               c("Unkn-dep",pollUnknown),
+#               c("Fallow", lowActivity),
+#               c("Forested",c(forested,otherWoodyCrop)),
+#               c("Pasture",pasture),
+#               c("Abandoned",abandAgri),
+#               c("Improductive",improductive),
+#               c("Artificial",notAgri))
+# Land cover types not in groups:
+grpElts = unlist(lapply(groups, function(x) x[2:length(x)]))
+paste0("Land cover types not considered:",landcovertypes[!(landcovertypes %in% grpElts)])
 
 # If method 1, add water and other:
 # groups = list.append(groups,c("water",c("water")),c("other",c("other"))) 
-df_LCtransitions_groups = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
-rownames(df_LCtransitions_groups) = lapply(groups, `[[`, 1)
-colnames(df_LCtransitions_groups) = lapply(groups, `[[`, 1)
+
+# ORIGIN
+df_LCorigin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
+rownames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
+colnames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
 for(groupRow in groups) {
   for (groupCol in groups)
   {
@@ -187,47 +200,131 @@ for(groupRow in groups) {
     colName    = groupCol[1]
     lcTypesRow = groupRow[2:length(groupRow)]
     lcTypesCol = groupCol[2:length(groupCol)]
-    df_subset  = df_LCtransitions[lcTypesRow, lcTypesCol] 
-    df_LCtransitions_groups[rowName,colName] = sum(df_subset)
+    df_subset  = df_LCorigin[lcTypesRow, lcTypesCol] 
+    df_LCorigin_gr[rowName,colName] = sum(df_subset)
   }
 }
-df_LCtransitions_groups_norm = df_LCtransitions_groups*0
-for (group in rownames(df_LCtransitions_groups)) {
-  if (rowSums(df_LCtransitions_groups[group,]) > 0) df_LCtransitions_groups_norm[group, ] = df_LCtransitions_groups[group, ] /  rowSums(df_LCtransitions_groups[group,])
+df_LCorigin_gr_norm = df_LCorigin_gr*0
+for (group in rownames(df_LCorigin_gr)) {
+  if (rowSums(df_LCorigin_gr[group,]) > 0) df_LCorigin_gr_norm[group, ] = df_LCorigin_gr[group, ] /  rowSums(df_LCorigin_gr[group,])
+}
+
+# DESTINATION
+df_LCdestin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
+rownames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
+colnames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
+for(groupRow in groups) {
+  for (groupCol in groups)
+  {
+    rowName    = groupRow[1]
+    colName    = groupCol[1]
+    lcTypesRow = groupRow[2:length(groupRow)]
+    lcTypesCol = groupCol[2:length(groupCol)]
+    df_subset  = df_LCdestin[lcTypesRow, lcTypesCol] 
+    df_LCdestin_gr[rowName,colName] = sum(df_subset)
+  }
+}
+df_LCdestin_gr_norm = df_LCdestin_gr*0
+for (group in rownames(df_LCdestin_gr)) {
+  if (rowSums(df_LCdestin_gr[group,]) > 0) df_LCdestin_gr_norm[group, ] = df_LCdestin_gr[group, ] /  rowSums(df_LCdestin_gr[group,])
 }
 
 
 ############
 # PLOTS
 ############
-# If we want to see where landcovers come from, instead of where they go, transpose df:
-transpose = FALSE
-removeNoTransition = TRUE
-abbreviateNames = FALSE 
-df_LCtransitions_groups_norm_aux = df_LCtransitions_groups_norm
-if (transpose) df_LCtransitions_groups_norm_aux = t(df_LCtransitions_groups_norm_aux)
-df_melt = melt(as.matrix(df_LCtransitions_groups_norm_aux))
+figFolder = "C:/Users/angel/git/ESYRCE/figures/"
+removeNoTransition = FALSE
+abbreviateNames = FALSE
+
+# Origin agri land
+target = "Agri Land"
+title = "Agricultural Land origin"
+df_plot = df_LCorigin_gr_norm
+df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
 if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
 if (abbreviateNames) {
   df_melt$origin = abbreviate(df_melt$origin)
   df_melt$final  = abbreviate(df_melt$final)  
 }
+df_melt_sel = df_melt[df_melt$origin == target,]
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+    geom_bar(stat="identity") + 
+    ggtitle(title))
+# Save in a png file
+png(paste0(figFolder,title,".png")) 
+p
+dev.off() 
+
+# Destination agri land
+target = "Agri Land"
+title = "Agricultural Land destination"
+df_plot = df_LCdestin_gr_norm
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+    geom_bar(stat="identity") + 
+    ggtitle(title))
+# Save in a png file
+png(paste0(figFolder,title,".png")) 
+p
+dev.off() 
+
+# Origin poll-dep crops
+target = "Poll-dep"
+title = "Poll-dep crops origin"
+df_plot = df_LCorigin_gr_norm
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+    geom_bar(stat="identity") + 
+    ggtitle(title)) + ylim(0,0.25)
+# Save in a png file
+png(paste0(figFolder,title,".png")) 
+p
+dev.off() 
+
+# Origin poll-indep crops
+target = "Poll-indep"
+title = "Poll-indep crops origin"
+df_plot = df_LCorigin_gr_norm
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+    geom_bar(stat="identity") + 
+    ggtitle(title)) + ylim(0,0.25)
+# Save in a png file
+png(paste0(figFolder,title,".png")) 
+p
+dev.off() 
+
 # All groups
 # (p1<-ggplot(data=df_melt, aes(x=final, y=value)) +
 #   geom_bar(stat="identity")) + 
 #   ggtitle("Transitions") +
 #   facet_wrap(~origin)
-# One group
-target = "Poll-indep crops"
-title = "Poll-indep crops destination"
-df_melt_sel = df_melt[df_melt$origin == target,]
-(p2<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
-    geom_bar(stat="identity") + 
-    ggtitle(title))
 
 ##################
-# ANALYSE REGIONS
+# ANALYSE REGIONS 
 ##################
 df_data = df_data[df_data$region == "Galicia",] # By region/province?
 df_lcsums = data.frame(landcover = landcovertypes, totalArea=colSums(df_data[,prop_landcovertypes]),row.names = NULL)

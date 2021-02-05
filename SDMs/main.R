@@ -8,17 +8,14 @@
 ###############################
 # Load libraries and set WD
 rm(list=ls())
-setwd("C:/Users/angel.gimenez/git/R/SDMs/")
+setwd("C:/Users/angel/git/R/SDMs/")
 source("lib/dataFunctions.R")
-library(maptools)
 library(dplyr)
-library(raster)
-library(RWeka)
 library(rlist)
 
 # Load species configuration
-source("config_species/commonSettings.R")
 source("config_species/bombus_pratorum.R")
+source("config_species/commonSettings.R")
 
 ###############################
 # Load GBIF data: presence-only
@@ -27,10 +24,11 @@ if (gbifReady) {
 } else {
   # Download and save GBIF data
   dfGbif = downloadGbifData(species, timeSpan)
+  dfGbif = removeNAandDupLocations(dfGbif, "lon", "lat", 4)
   write.csv(dfGbif, paste0(dataDir, csvGbif), row.names=FALSE)
 }
 
- # Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
+# Load OBServ data: presence and pseudo-absences (OBServ locations where the species is not observed)
 if (observReady) {
   dfOBServInsectSampling = read.csv(file = paste0(dataDir, csvObservInsect), header = TRUE)
   dfOBServFieldData      = read.csv(file = paste0(dataDir, csvObservField), header = TRUE)

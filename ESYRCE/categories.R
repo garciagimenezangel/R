@@ -159,12 +159,12 @@ improductive = c('improductive')
 
 notAgri = c('notAgri')
 
-other = c('fallow',     
+lowActivity = c('fallow',     
           'emptyGreenh',
           'posio',      
-          'wasteland',  
-          'spartizal',  
-		      'abandoned')
+          'spartizal')
+
+abandAgri = c('wasteland','abandoned') # erial y baldío
 
 pasture = c("naturalMeadow", 
             "highMountainMeadow", 
@@ -195,13 +195,13 @@ irrigated = c("waterScarce", "irrigated", "greenhouse")
 dry = c("dry")
 
 agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
-                ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery)   
+                ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery, lowActivity)   
 
 seminatural = c(forested, otherWoodyCrop, pasture)
 
 fruitTree = c(citric, fruitNoCitric)
 
-landcovertypes = c(agriLand, seminatural, other, improductive, notAgri)
+landcovertypes = c(agriLand, seminatural, abandAgri, improductive, notAgri)
 
 prop_landcovertypes  = paste0("prop_",landcovertypes)
 yield_landcovertypes = paste0("yield_",landcovertypes)
@@ -226,11 +226,12 @@ increaseBreeding = c('potato','sweetPotato','garlic','banana','pineapple')
 increaseSeedProd = c('tobacco','alfalfa','vetchFodder', 'artichoke','celery','onion','broccoli','cabbage','cauliflower','endive','aspargus',
                      'redCabbage','leek','carrot')
 
-pollImportant = c(modest, essential, great, increase, increaseBreeding, increaseSeedProd)
-pollNotImport = c(little, noIncrease)
+pollDependent = c(little, modest, essential, great, increase)
+pollNotDepent = c(noIncrease, increaseBreeding, increaseSeedProd)
+pollUnknown   = unknown
 
 # # Sanity check (columns categorized)
-# landcovertypes[!(landcovertypes %in% c(pollImportant, pollNotImport, unknown))]
+# landcovertypes[!(landcovertypes %in% c(pollDependent, pollNotDepent, pollUnknown))]
 # for (name in colnames(df_data)) { if(name %in% prop_landcovertypes  | 
 #                                      name %in% yield_landcovertypes | 
 #                                      name %in% var_landcovertypes   |
