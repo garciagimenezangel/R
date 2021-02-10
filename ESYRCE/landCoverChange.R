@@ -10,124 +10,44 @@ library(reshape2)
 setwd("C:/Users/angel/git/R/ESYRCE/")
 # setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
 source("./categories.R")
+source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
-dataFile     = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
-df_data      = read.csv(dataFile, header=T)
+dataFileMetrics       = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
+dataFileControlPoints = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
 
-##############
-# METHOD 1
-##############
 # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
-lccp_landcovertypes = c(landcovertypes, "water", "other") # water also captured at control points, and 'other' to account for unidentified cover types
-df_LCtransitions = data.frame(matrix(0, ncol = length(lccp_landcovertypes), nrow = length(lccp_landcovertypes)))
-rownames(df_LCtransitions) = lccp_landcovertypes
-colnames(df_LCtransitions) = lccp_landcovertypes
-lccpNames = c("lccp1", "lccp2", "lccp3", "lccp4", "lccp5", "lccp6", "lccp7", "lccp8", "lccp9")
-df_LCCP  = df_data[, c("D1_HUS", "D2_NUM", "YEA", lccpNames)]
-husOld   = ""
-numOld   = ""
-lccpOldValues = data.frame(matrix("", ncol = 9, nrow = 1))
-lccpNewValues = data.frame(matrix("", ncol = 9, nrow = 1))
-colnames(lccpOldValues) = lccpNames
-colnames(lccpNewValues) = lccpNames
-for (i in 1:nrow(df_LCCP)) {
-  husNew     = df_LCCP[i, "D1_HUS"]
-  numNew     = df_LCCP[i, "D2_NUM"]
-  isNewSegment = (husNew != husOld | numNew != numOld)
-  for (j in 1:9) {
-    # get lccp's 
-    if (df_LCCP[i,lccpNames[j]] %in% lccp_landcovertypes) { # if new lccp valid
-      
-      lccpNewValues[1, lccpNames[j]] = df_LCCP[i, lccpNames[j]] # get new lccp
-      
-      if (!isNewSegment & (lccpOldValues[1,lccpNames[j]] %in% lccp_landcovertypes) ) { # if not new segment and old lccp valid, save transition
-        lccpOld = lccpOldValues[1,lccpNames[j]]
-        lccpNew = lccpNewValues[1,lccpNames[j]]                    
-        df_LCtransitions[lccpOld, lccpNew] = df_LCtransitions[lccpOld, lccpNew] + 1
-      }
-      
-      lccpOldValues[1,lccpNames[j]] = lccpNewValues[1, lccpNames[j]] # update old lccp
-    }
-    else {
-      # lccp not valid, skip
-    }
-  }
-  husOld = husNew
-  numOld = numNew
-}
-
-
-##############
-# METHOD 2
-##############
+csvSaved = TRUE
+df_LCtransitions = ifelse(csvSaved, 
+                          read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method1.csv")),
+                          getLandCoverTransitionsFromControlPoints(dataFile = dataFileControlPoints))
+                          
 # Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
-# if already calculated: df_LCtransitions = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2.csv"), header=T, row.names=1)
+# if already calculated: 
+csvSaved = TRUE
+df_LCtransitions = ifelse(csvSaved, 
+                          read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2.csv")),
+                          getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics))
 
-df_LCtransitions = data.frame(matrix(0, ncol = length(landcovertypes), nrow = length(landcovertypes)))
-rownames(df_LCtransitions) = landcovertypes
-colnames(df_LCtransitions) = landcovertypes
-df_LCtransitionsOld = df_LCtransitions # use a copy to do sanity checks at every step
-
-df_LCprop = df_data[, c("D1_HUS", "D2_NUM", "YEA", "segAreaNoWater", prop_landcovertypes)]
-df_LCarea = df_LCprop[, prop_landcovertypes] * df_LCprop$segAreaNoWater
-colnames(df_LCarea) = landcovertypes
-
-husOld     = df_LCprop[1, "D1_HUS"]
-numOld     = df_LCprop[1, "D2_NUM"]
-segAreaOld = df_LCprop[1, "segAreaNoWater"]
-for (i in 2:nrow(df_LCprop)) {
-  husNew     = df_LCprop[i, "D1_HUS"]
-  numNew     = df_LCprop[i, "D2_NUM"]  
-  segAreaNew = df_LCprop[i, "segAreaNoWater"]
-  if (husNew == husOld & numNew == numOld & abs(segAreaNew-segAreaOld) < 1e-3) { # if area changes (rare), we skip the row
-    
-    # Use this row and the previous to obtain gains and loses in area
-    changeVector = df_LCarea[i,landcovertypes] - df_LCarea[i-1,landcovertypes]
-    changeVector[abs(changeVector) < 1e-3] = 0 # remove negligible changes
-    #Sanity check:
-    if (abs(sum(changeVector)) > 1e-2) {
-      print(paste("Warning: gains not equal to loses in row:",i))
-      print(paste("Difference:",sum(changeVector)))
-    }
-    else {
-      # LC types according to change in extension
-      noChange = landcovertypes[df_LCarea[i-1,landcovertypes]>1e-3 & changeVector==0]  # there was some area of the lc type and no change
-      winners  = landcovertypes[changeVector>0]
-      losers   = landcovertypes[changeVector<0]
-      
-      # Set win/loss matrices
-      win  = matrix(changeVector[changeVector>0]) / sum(changeVector[changeVector>0])
-      loss = matrix(changeVector[changeVector<0]) 
-      rownames(win)  = winners
-      rownames(loss) = losers
-      
-      for (lcKept in c(noChange,winners)) {
-        df_LCtransitions[lcKept,lcKept] = df_LCtransitionsOld[lcKept,lcKept] + df_LCarea[i-1,lcKept] # add all the area that was already there, because no change or increased, so we assume all has been kept
-      }
-      for (lcLos in losers) {
-        df_LCtransitions[lcLos,lcLos] = df_LCtransitionsOld[lcLos,lcLos] + df_LCarea[i,lcLos] # add the area that remains
-        # Find the total share of the loss for each winner
-        totalLoss = -changeVector[,lcLos]
-        for (lcWin in winners) {
-          df_LCtransitions[lcLos,lcWin] = df_LCtransitionsOld[lcLos,lcWin] + totalLoss*win[lcWin,]
-        }
-      }
-      # Sanity check
-      for (loser in losers){
-        testSums = rowSums(df_LCtransitions[loser,] - df_LCtransitionsOld[loser,])
-        if( all(abs(df_LCarea[i-1,loser] - testSums) > 1e-3) ) print(paste("Warning: area lost not well distributed among winners:",i))
-      }
-    }
-  }
-
-  husOld     = husNew
-  numOld     = numNew
-  segAreaOld = segAreaNew
-  df_LCtransitionsOld = df_LCtransitions
+################
+# SPLIT BY YEAR
+################
+csvSaved = TRUE
+initYears = seq(2001,2018)
+df_LCtrans_byYear = list()
+for (i in seq(1,length(initYears))) {
+  initYear = initYears[i]
+  endYear  = initYear+1
+  df_LCtrans_byYear[[i]] = ifelse(csvSaved, 
+                                  read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv")),
+                                  getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics, timeInterval = c(initYear,endYear)))
 }
-
+for (i in seq(1,length(initYears))) {
+  initYear = initYears[i]
+  endYear  = initYear+1
+  fileName = paste0("landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv")
+  write.csv(df_LCtrans_byYear[[i]], file=paste0(dataFolder,fileName), row.names=FALSE)
+}
 
 ############################
 # NORMALIZED TRANSITIONS
@@ -167,7 +87,8 @@ for (lc in landcovertypes) {
 #               c("fallow",other),
 #               c("improductive",improductive),
 #               c("notAgri",notAgri))
-groups = list(c("Agri Land",agriLand),
+groups = list(c("Active Agri",agriActive),
+              c("Fallow", lowActivity),
               c("Forested",c(forested,otherWoodyCrop)),
               c("Pasture",pasture),
               c("Abandoned",abandAgri),
@@ -182,7 +103,7 @@ groups = list(c("Agri Land",agriLand),
 #               c("Abandoned",abandAgri),
 #               c("Improductive",improductive),
 #               c("Artificial",notAgri))
-# Land cover types not in groups:
+# Sanity check->Land cover types not in groups:
 grpElts = unlist(lapply(groups, function(x) x[2:length(x)]))
 paste0("Land cover types not considered:",landcovertypes[!(landcovertypes %in% grpElts)])
 

@@ -197,6 +197,9 @@ dry = c("dry")
 agriLand  = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
                 ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery, lowActivity)   
 
+agriActive = c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
+                   ornamental, citric, fruitNoCitric, vineyard, oliveTrees, nursery)
+
 seminatural = c(forested, otherWoodyCrop, pasture)
 
 fruitTree = c(citric, fruitNoCitric)
