@@ -161,10 +161,9 @@ notAgri = c('notAgri')
 
 lowActivity = c('fallow',     
           'emptyGreenh',
-          'posio',      
-          'spartizal')
+          'posio')
 
-abandAgri = c('wasteland','abandoned') # erial y baldío
+abandAgri = c('wasteland','abandoned','spartizal') # espartizal, erial y baldío
 
 pasture = c("naturalMeadow", 
             "highMountainMeadow", 
