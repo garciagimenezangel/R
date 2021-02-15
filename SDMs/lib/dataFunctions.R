@@ -83,17 +83,13 @@ getAbsenceData <- function(dfPresence, dfOBServInsectSampling, dfOBServFieldData
   # Tag origin of the points 
   dfAbsence$source = replicate(nrow(dfAbsence),"OBServ")
   
-  # Take points within the convex hull of the presence points, buffered 1 degree
-  circleHull   = circleHull(dfPresence[c("lon","lat")])
-  circleHull   = buffer(polygons(circleHull),width=1)
-  absPoints = SpatialPoints(cbind(dfAbsence$lon, dfAbsence$lat))
-  inConHull = array()
-  for(i in seq(1:length(absPoints))) {
-    inConHull[i] = gContains(circleHull, absPoints[i])
-  }
-  dfAbsence = dfAbsence[inConHull,]
+  # Take points within the region of interest
+  withinROI = (dfAbsence$lon > regionOfInterest[1]) &
+    (dfAbsence$lon < regionOfInterest[2]) &
+    (dfAbsence$lat > regionOfInterest[3]) &
+    (dfAbsence$lat < regionOfInterest[4]) 
   
-  return(dfAbsence)
+  return(dfAbsence[withinROI,])
 }
 
 getFeatures <- function(featDir, removePatterns, coords_digits=4) {
@@ -123,7 +119,7 @@ getFeatures <- function(featDir, removePatterns, coords_digits=4) {
       }
     }
     if (newName == "") break
-    dfFeature = dfFeature %>% select(c(newName,"longitude","latitude"))
+    dfFeature = dfFeature %>% dplyr::select(c(newName,"longitude","latitude"))
     
     # Left join
     if (i==1) dfFeatures = dfFeature else dfFeatures = merge(dfFeatures, dfFeature, all.x = TRUE)
@@ -157,7 +153,7 @@ getHistos <- function(histoDir, removePatterns, coords_digits=4) {
       }
     }
     if (newName == "") break
-    dfHisto = dfHisto %>% select(c(newName,"longitude","latitude"))
+    dfHisto = dfHisto %>% dplyr::select(c(newName,"longitude","latitude"))
     
     # Left join
     if (i==1) dfHistos = dfHisto else dfHistos = merge(dfHistos, dfHisto, all.x = TRUE)
@@ -218,7 +214,7 @@ removeNAandDupLocations <- function(df, lon, lat, coords_digits = 4) {
   df$round_lon = round(df$lon, digits=coords_digits)
   df$round_lat = round(df$lat, digits=coords_digits)
   df = df[!duplicated(df[c("round_lon","round_lat")]),]
-  df = df %>% select(-c("round_lon","round_lat"))
+  df = df %>% dplyr::select(-c("round_lon","round_lat"))
   return(df)
 }
 
@@ -243,7 +239,7 @@ clean <- function(df, yrFrom=1800, yrTo=2100, minDec=3, lon="lon", lat="lat", sp
     df["species"] = rep("mockSpecies",nrow(df))
     cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = "species", 
                                     tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "zeros"))
-    df = df %>% select(-c("species"))
+    df = df %>% dplyr::select(-c("species"))
   } else {
     cleancoord <- clean_coordinates(x = df, lon = lon, lat = lat, species = species, 
                                     tests = c("capitals", "centroids", "equal", "gbif", "institutions", "seas", "outliers", "zeros"))

@@ -99,7 +99,6 @@ ggplot(sf_slopeAgg) +
   geom_sf(data = sf_slopeAgg, aes(fill = slope))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
 
-
 # propAgri
 name = "Average \nPercentage \nCropland"
 baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
@@ -314,6 +313,36 @@ sf_slopeAgg      = merge(polys,df_slopeAggMean)
 ggplot(sf_slopeAgg) +
   geom_sf(data = sf_slopeAgg, aes(fill = slope))+
   scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
+
+# heterogeneity by area of cropland
+name = "Average \nCrop Diversity \n(#crops/cropland ha)"
+baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
+df_metric        = df_data[,c(baseCols,"heterogeneity")]
+df_metric$metric = df_metric[,"heterogeneity"]
+df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
+df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+df_meanAgg       = merge(df_aggUnit, df_mean)
+df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
+sf_meanAgg       = merge(polys,df_meanAggMean)
+midpoint         = mean(df_meanAggMean$mean)
+ggplot(sf_meanAgg) +
+  geom_sf(data = sf_meanAgg, aes(fill = mean))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
+
+name = "Change in \nCrop Diversity \n(%/yr)"
+baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
+df_metric        = df_data[,c(baseCols,"heterogeneity")]
+df_metric$metric = df_metric[,"heterogeneity"]
+df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
+df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+df_slopeAgg      = merge(df_aggUnit, df_slope)
+df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
+df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
+sf_slopeAgg      = merge(polys,df_slopeAggMean)
+ggplot(sf_slopeAgg) +
+  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
+
 
 # demand
 name = "Average \nPollinators \nDemand"

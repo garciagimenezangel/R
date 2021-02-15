@@ -23,4 +23,5 @@ timeSpan        = paste0("year=",stringr::str_c(yrFrom),",",stringr::str_c(yrTo)
 coordsDigits    = 4
 minCoordDig     = 3
 removePatterns  = c("first_","_mean","_monthly_mean", "histogram_")
+regionOfInterest= c(-11, 34, 30, 60) # lon min, lon max, lat min, lat max
 ###############################

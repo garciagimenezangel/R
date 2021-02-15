@@ -257,6 +257,15 @@ getLandCoverTransitionsFromProportion = function(dataFile, timeInterval=c(1900,2
   return(df_LCtransitions)
 }
 
+# Counts visits to each segment
+countVisitSegment <- function(data) {
+  x = data$YEA # xaxis: years
+  d1 = data$D1_HUS
+  d2 = data$D2_NUM
+  count=length(x)
+  return(tibble::tibble(d1=d1, d2=d2, count = count))
+}
+
 # rescale to the interval [0,1]
 rescaleVariable = function(x) {
   y = x-min(x)

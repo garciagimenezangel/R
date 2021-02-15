@@ -14,7 +14,7 @@ dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
+dataFile     = paste0(dataFolder, "geo_metrics_climate_intensif_pollService_20-12-18.csv")
 df_data      = read.csv(dataFile, header=T)
 modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
