@@ -13,21 +13,19 @@ source("./categories.R")
 source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFileMetrics       = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
+dataFileMetrics       = paste0(dataFolder, "metrics_v2021-02.csv")
 dataFileControlPoints = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
 
 # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
 csvSaved = TRUE
-df_LCtransitions = ifelse(csvSaved, 
-                          read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method1.csv")),
-                          getLandCoverTransitionsFromControlPoints(dataFile = dataFileControlPoints))
-                          
+if (csvSaved)  df_LCtransitions = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method1.csv"), row.names = 1)
+if (!csvSaved) df_LCtransitions = getLandCoverTransitionsFromControlPoints(dataFile = dataFileControlPoints)
+
 # Método 2: de un año a otro, extraer pérdidas y ganancias de cada landcover, y distribuirlas equitativamente. Es decir, si por ejemplo maíz supone un 10% de todas las ganancias de cobertura ese año, supondríamos que el 10% de las pérdida de cada landcover que pierde cobertura, ha ido a parar a cobertura de maíz.
 # if already calculated: 
 csvSaved = TRUE
-df_LCtransitions = ifelse(csvSaved, 
-                          read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2.csv")),
-                          getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics))
+if (csvSaved)  df_LCtransitions = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2.csv"), row.names = 1)
+if (!csvSaved) df_LCtransitions = getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics)
 
 ################
 # SPLIT BY YEAR
@@ -38,15 +36,15 @@ df_LCtrans_byYear = list()
 for (i in seq(1,length(initYears))) {
   initYear = initYears[i]
   endYear  = initYear+1
-  df_LCtrans_byYear[[i]] = ifelse(csvSaved, 
-                                  read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv")),
-                                  getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics, timeInterval = c(initYear,endYear)))
+  if (csvSaved)  df_LCtrans_byYear[[i]] = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv"), row.names = 1)
+  if (!csvSaved) df_LCtrans_byYear[[i]] = getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics, timeInterval = c(initYear,endYear))
 }
 for (i in seq(1,length(initYears))) {
   initYear = initYears[i]
   endYear  = initYear+1
   fileName = paste0("landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv")
-  write.csv(df_LCtrans_byYear[[i]], file=paste0(dataFolder,fileName), row.names=FALSE)
+  rownames(df_LCtrans_byYear[[i]]) = colnames(df_LCtrans_byYear[[i]])  
+  write.csv(df_LCtrans_byYear[[i]], file=paste0(dataFolder,fileName), row.names=TRUE)
 }
 
 ############################
@@ -92,7 +90,12 @@ groups = list(c("Active Agri",agriActive),
               c("Forested",c(forested,otherWoodyCrop)),
               c("Pasture",pasture),
               c("Abandoned",abandAgri),
-              c("Improductive",improductive),
+              c("Unproductive",improductive),
+              c("Artificial",notAgri))
+groups = list(c("Agri Land",agriLand),
+              c("Seminatural",seminatural),
+              c("Abandoned",abandAgri),
+              c("Unproductive",improductive),
               c("Artificial",notAgri))
 # groups = list(c("Poll-dep",pollDependent),
 #               c("Poll-indep",pollNotDepent),
@@ -101,7 +104,7 @@ groups = list(c("Active Agri",agriActive),
 #               c("Forested",c(forested,otherWoodyCrop)),
 #               c("Pasture",pasture),
 #               c("Abandoned",abandAgri),
-#               c("Improductive",improductive),
+#               c("Unproductive",improductive),
 #               c("Artificial",notAgri))
 # Sanity check->Land cover types not in groups:
 grpElts = unlist(lapply(groups, function(x) x[2:length(x)]))
@@ -154,13 +157,13 @@ for (group in rownames(df_LCdestin_gr)) {
 ############
 # PLOTS
 ############
-figFolder = "C:/Users/angel/git/ESYRCE/figures/"
-removeNoTransition = FALSE
+figFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
+removeNoTransition = TRUE
 abbreviateNames = FALSE
 
-# Origin agri land
-target = "Agri Land"
-title = "Agricultural Land origin"
+# Origin
+target = "Seminatural"
+title = "Seminatural Land origin"
 df_plot = df_LCorigin_gr_norm
 df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
@@ -170,12 +173,14 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+    ylab("Percentage") +
+    xlab("Land cover category") +
     geom_bar(stat="identity") + 
     ggtitle(title))
 # Save in a png file
 png(paste0(figFolder,title,".png")) 
-p
+print(p)
 dev.off() 
 
 # Destination agri land
@@ -190,7 +195,9 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+(p<-ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+    ylab("Percentage") +
+    xlab("Land cover category") +
     geom_bar(stat="identity") + 
     ggtitle(title))
 # Save in a png file

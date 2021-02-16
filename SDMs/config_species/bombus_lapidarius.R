@@ -6,6 +6,5 @@ excludeNames = c("Bombus Sp.", "Bombus sp", "Bombus sp.", "Bombus spp", "Bombus"
 gbifReady       = FALSE   # TRUE: gbif df already calculated and saved
 observReady     = FALSE  # TRUE: observ df already calculated and saved
 locatReady      = FALSE  # TRUE: locations df already calculated and saved
-featuresReady   = FALSE  # TRUE: features df already calculated and saved
-useRasters      = FALSE  # TRUE: use collection of rasters to extract features 
+
 

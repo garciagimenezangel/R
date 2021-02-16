@@ -14,7 +14,7 @@ library(dplyr)
 library(rlist)
 
 # Load species configuration
-source("config_species/bombus_pratorum.R")
+source("config_species/bombus_terrestris.R")
 source("config_species/commonSettings.R")
 
 ###############################
@@ -51,10 +51,10 @@ if (locatReady) {
   dfLocations = read.csv(file = paste0(dataDir,csvLocations), header = TRUE)
 } else {
   # Presence data: column "presence" == 1
-  dfPresence = getPresenceData(species, dfOBServInsectSampling, dfOBServFieldData, dfGbif, otherNames)
+  dfPresence = getPresenceData(species, dfOBServInsectSampling, dfOBServFieldData, dfGbif, regionOfInterest, otherNames)
   
   # Pseudo-absence data: column "presence" == 0
-  dfAbsence = getAbsenceData(dfPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames)
+  dfAbsence = getAbsenceData(dfPresence, dfOBServInsectSampling, dfOBServFieldData, regionOfInterest, excludeNames)
   
   # Bind presence and pseudo-absence locations
   selectedCols = c("presence","pollinator","lon","lat","sampling_year","source")

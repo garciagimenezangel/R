@@ -1,6 +1,7 @@
 library(dplyr)
 library(gstat) 
 library(sf)
+library(ggplot2)
 rm(list=ls())
 ###########
 
@@ -16,10 +17,11 @@ source("./functions.R")
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
 # GEEFolder  = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+figuresFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
 GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "geo_metrics_climate_intensif_pollService_20-12-18.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
 df_data      = read.csv(dataFile, header=T)
 modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
@@ -39,311 +41,75 @@ df_data$province = abbreviate(df_data$province) # abbreviate names
 df_pollModel$region = abbreviate(df_pollModel$region) # abbreviate names
 df_pollModel$province = abbreviate(df_pollModel$province) # abbreviate names
 
+# General function
+saveFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercentage = FALSE, minThresh=-1e100, maxThresh=1e100) {
+  baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
+  df_metric          = df_data[,c(baseCols,columns)]
+  if(isOneColumn) {
+    df_metric$metric = df_metric[,columns]
+  } else {
+    df_metric$metric = rowSums(df_metric[,columns])
+  }
+  df_metric          = df_metric[df_metric$metric > minThresh,]
+  df_metric          = df_metric[df_metric$metric < maxThresh,]
+  if (showAsPercentage) 
+    df_metric$metric = df_metric$metric*100 # convert to percentage
+  # Mean
+  pngFile = paste0(figuresFolder,"avg",gsub(" ","",title),".png")
+  name = paste0("Average \n", gsub("\\(","\n(",title), "\n(",units,")")
+  df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
+  df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+  df_meanAgg       = merge(df_aggUnit, df_mean)
+  df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
+  sf_meanAgg       = merge(polys,df_meanAggMean)
+  midpoint         = mean(df_meanAggMean$mean)
+  ggplot(sf_meanAgg) +
+    geom_sf(data = sf_meanAgg, aes(fill = mean))+
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
+  ggsave(pngFile)
+  # Slope
+  pngFile = paste0(figuresFolder,"slope",gsub(" ","",title),".png")
+  name = paste0("Change in \n", gsub("\\(","\n(",title), "\n(%/yr)")
+  df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
+  df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+  df_slopeAgg      = merge(df_aggUnit, df_slope)
+  df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
+  df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
+  sf_slopeAgg      = merge(polys,df_slopeAggMean)
+  ggplot(sf_slopeAgg) +
+    geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+    scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
+  ggsave(pngFile)
+}
 
-#######
-# MAPS 
-#######
-# FieldSize(sin disolver)
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"avgFieldSize")]
-df_metric$metric = df_metric[,"avgFieldSize"]
-df_metric        = df_metric[df_metric$metric > 0,] # rule out plots with no fields (avg size=0)
-# Mean
-name = "Average \nField Size \n(ha)"
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-# Slope
-name = "Change in \nField Size \n(%/yr)"
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# FieldSize(dissolved)
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"avgFieldSizeDiss")]
-df_metric$metric = df_metric[,"avgFieldSizeDiss"]
-df_metric        = df_metric[df_metric$metric > 0,] # rule out plots with no fields (avg size=0)
-# Mean
-name = "Average \nField Size \nDiss.(ha)"
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-# Slope
-name = "Change in \nField Size \nDiss.(%/yr)"
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# propAgri
-name = "Average \nPercentage \nCropland"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",agriLand)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nCropland (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",agriLand)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
+#############
+# LANDCOVER
+#############
+# Cropland
+saveFigures(paste0("prop_",agriLand), "Cropland", "%", showAsPercentage = TRUE)
 # seminatural
-name = "Average \nPercentage \nSeminatural \nLand"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",seminatural)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nSeminatural \nLand (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",seminatural)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
+saveFigures(paste0("prop_",seminatural), "Seminatural", "%", showAsPercentage = TRUE)
 # notAgri (artificial)
-name = "Average \nPercentage \nArtificial \nLand"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_","notAgri")
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = df_metric[,columns]
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nArtificial \nLand (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_","notAgri")
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = df_metric[,columns]
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# improductive
-name = "Average \nPercentage \nImproductive \nLand"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_","improductive")
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = df_metric[,columns]
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nImproductive \nLand (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_","improductive")
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = df_metric[,columns]
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
+saveFigures("prop_notAgri", "Artificial", "%", isOneColumn = TRUE, showAsPercentage = TRUE)
 # edgeDensityDiss 
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"edgeDensityDiss")]
-df_metric$metric = df_metric[,"edgeDensityDiss"]
-# mean
-name = "Average \nEdge Density \n(m/ha)"
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-# slope
-name = "Change in \nEdge Density \n(%/yr)"
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
+saveFigures("edgeDensityDiss", "Edge Density", "m/ha", isOneColumn = TRUE)
 
-# edgeDensityFields 
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"edgeDenFields")]
-df_metric$metric = df_metric[,"edgeDenFields"]
-# mean
-name = "Average \nEdge Density \nFields (m/ha)"
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-# slope
-name = "Change in \nEdge Density \nFields (%/yr)"
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
+##########################
+# Cropland metrics
+##########################
+# FieldSize(sin disolver)
+saveFigures("avgFieldSize","Field Size","ha", isOneColumn=TRUE, minThresh=0)
+saveFigures("avgFieldSize","Field Size (Large Fields)","ha", isOneColumn=TRUE, minThresh=5) #(area fields>5ha)
+saveFigures("avgFieldSize","Field Size (Small Fields)","ha", isOneColumn=TRUE, minThresh=0, maxThresh=5) #(area fields<5ha)
+# Diversity
+saveFigures("cropsPerCropHa", "Diversity", "crops/cultivated ha", isOneColumn = TRUE, minThresh=0)
+saveFigures("cropsPerHa", "Diversity", "crops/ha", isOneColumn = TRUE, minThresh=0)
+# Intensification
+saveFigures("intensification", "Intensification", "score", isOneColumn = TRUE)
 
-# heterogeneity
-name = "Average \nCrop Diversity \n(#crops/ha)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"heterogeneity")]
-df_metric$metric = df_metric[,"heterogeneity"]
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nCrop Diversity \n(%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"heterogeneity")]
-df_metric$metric = df_metric[,"heterogeneity"]
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# heterogeneity by area of cropland
-name = "Average \nCrop Diversity \n(#crops/cropland ha)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"heterogeneity")]
-df_metric$metric = df_metric[,"heterogeneity"]
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nCrop Diversity \n(%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"heterogeneity")]
-df_metric$metric = df_metric[,"heterogeneity"]
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-
+##########################
+# Pollinators metrics
+##########################
 # demand
 name = "Average \nPollinators \nDemand"
 baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")

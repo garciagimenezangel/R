@@ -28,7 +28,7 @@ df_pollModel = read.csv(modelFile, header=T)
 #######################
 # Pollination service 
 #######################
-# Calculate as (pollinator score) - (demand), but set to 0 places where there is low demand
+# 1. Calculate as (pollinator score) - (demand), but set to 0 places where there is low demand
 
 # Identify places with low demand
 threshold = 0.1
@@ -55,6 +55,11 @@ df_data[!lowDemand,"pollScore"] = pollScore
 # Get value of the service
 df_data$pollService = 0
 df_data[!lowDemand, "pollService"] = df_data[!lowDemand, "pollScore"] - df_data[!lowDemand,"demand"]
+
+# 2. Calculate as (2xy - y^2) where x=(pollinator score), y=(demand)
+x = df_data$pollScore
+y = df_data$demand
+df_data$pollService2 = 2*x*y - y*y
 
 # Save data 
 write.csv(df_data, file=paste0(dataFolder, "geo_metrics_climate_intensif_pollService_20-12-18.csv"), row.names=FALSE)

@@ -36,7 +36,7 @@ getOBServFieldData <- function(observDir){
   return(dfFieldData)
 }
 
-getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, dfGbif, otherNames=""){
+getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, dfGbif, regionOfInterest, otherNames=""){
   # Select subset data from OBServ and GBIF data
   dfInsectPresence = dfOBServInsectSampling[dfOBServInsectSampling$pollinator %in% c(species, otherNames) ,]
   dfObservPresence = merge(dfInsectPresence, dfOBServFieldData, by=c("study_id", "site_id"))
@@ -55,10 +55,17 @@ getPresenceData <- function(species, dfOBServInsectSampling, dfOBServFieldData, 
   dfPresence  = plyr::rbind.fill(dfObservPresence, dfGbifPresence)
   dfPresence["presence"]    = rep(1, nrow(dfPresence))
   dfPresence["pollinator"]  = rep(species, nrow(dfPresence)) # other_names -> species name
-  return(dfPresence)
+  
+  # Take points within the region of interest
+  withinROI = (dfPresence$lon > regionOfInterest[1]) &
+    (dfPresence$lon < regionOfInterest[2]) &
+    (dfPresence$lat > regionOfInterest[3]) &
+    (dfPresence$lat < regionOfInterest[4]) 
+  
+  return(dfPresence[withinROI,])
 }
 
-getAbsenceData <- function(dfPresence, dfOBServInsectSampling, dfOBServFieldData, excludeNames){
+getAbsenceData <- function(dfPresence, dfOBServInsectSampling, dfOBServFieldData, regionOfInterest, excludeNames){
   
   # Exclude species that show pattern $excludeInAbsenceSelection
   dfToExclude = data.frame(matrix(ncol = length(names(dfOBServInsectSampling)), nrow = 0))
