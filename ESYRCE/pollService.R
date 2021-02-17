@@ -26,7 +26,7 @@ df_pollModel = read.csv(modelFile, header=T)
 #######################
 # Pollination service 
 #######################
-# Get pollinators' score at every point with demand larger than threshold
+# Get pollinators' score at every point
 model = "ZonasNaturales_man0_mod0"
 getPollScore = function(x) {
   year = x["YEA"]
@@ -40,15 +40,15 @@ getPollScore = function(x) {
   pollScore = df_pollModel[selected,model] 
   return(pollScore)
 }
+pollScore = apply(df_data, 1, FUN = getPollScore) 
+pollScore[is.na(pollScore)] = 0
 
 ############
 # 1. Calculate as (pollinator score) - (demand), but set to 0 places where there is low demand
 # Identify places with low demand
 threshold = 0.1
 lowDemand = df_data$demand < threshold
-
 df_data$pollScore = 0
-pollScore = apply(df_data[!lowDemand,], 1, FUN = getPollScore) 
 df_data[!lowDemand,"pollScore"] = pollScore
 # Get value of the service
 df_data$pollService = 0
@@ -56,8 +56,7 @@ df_data[!lowDemand, "pollService"] = df_data[!lowDemand, "pollScore"] - df_data[
 
 ############
 # 2. Calculate as (2xy - y^2) where x=(pollinator score), y=(demand)
-pollScore = apply(df_data, 1, FUN = getPollScore) 
-df_data[!lowDemand,"pollScore"] = pollScore
+df_data$pollScore = pollScore
 x = df_data$pollScore
 y = df_data$demand
 df_data$pollService2 = 2*x*y - y*y

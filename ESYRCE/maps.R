@@ -2,6 +2,7 @@ library(dplyr)
 library(gstat) 
 library(sf)
 library(ggplot2)
+library(scales)
 rm(list=ls())
 ###########
 
@@ -23,7 +24,7 @@ GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 # Read datasets
 dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
 df_data      = read.csv(dataFile, header=T)
-modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
+modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
 # Regions
@@ -42,7 +43,7 @@ df_pollModel$region = abbreviate(df_pollModel$region) # abbreviate names
 df_pollModel$province = abbreviate(df_pollModel$province) # abbreviate names
 
 # General function
-saveFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercentage = FALSE, minThresh=-1e100, maxThresh=1e100) {
+saveFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercentage = FALSE, minThresh=-1e100, maxThresh=1e100, columnThresh="", squish=FALSE) {
   baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
   df_metric          = df_data[,c(baseCols,columns)]
   if(isOneColumn) {
@@ -50,13 +51,20 @@ saveFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercent
   } else {
     df_metric$metric = rowSums(df_metric[,columns])
   }
-  df_metric          = df_metric[df_metric$metric > minThresh,]
-  df_metric          = df_metric[df_metric$metric < maxThresh,]
+  if (columnThresh == "") { # use metric to set thresholds
+    df_metric = df_metric[df_metric$metric > minThresh,]
+    df_metric = df_metric[df_metric$metric < maxThresh,]
+  }
+  else { # use columnThresh to set thresholds
+    df_metric = df_metric[df_data[,columnThresh] > minThresh,]
+    df_metric = df_metric[df_data[,columnThresh] < maxThresh,]
+  }
   if (showAsPercentage) 
     df_metric$metric = df_metric$metric*100 # convert to percentage
   # Mean
   pngFile = paste0(figuresFolder,"avg",gsub(" ","",title),".png")
   name = paste0("Average \n", gsub("\\(","\n(",title), "\n(",units,")")
+  name = gsub("- ","\n",name)
   df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
   df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
   df_meanAgg       = merge(df_aggUnit, df_mean)
@@ -66,20 +74,29 @@ saveFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercent
   ggplot(sf_meanAgg) +
     geom_sf(data = sf_meanAgg, aes(fill = mean))+
     scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-  ggsave(pngFile)
+  ggsave(pngFile, width = 7, height = 7, dpi = 150, units = "in", device='png')
   # Slope
   pngFile = paste0(figuresFolder,"slope",gsub(" ","",title),".png")
   name = paste0("Change in \n", gsub("\\(","\n(",title), "\n(%/yr)")
+  name = gsub("- ","\n",name)
   df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
   df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
   df_slopeAgg      = merge(df_aggUnit, df_slope)
   df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
   df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
   sf_slopeAgg      = merge(polys,df_slopeAggMean)
-  ggplot(sf_slopeAgg) +
-    geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-    scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-  ggsave(pngFile)
+  if (squish) {
+    ggplot(sf_slopeAgg) +
+      geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name, limits = c(-10, 10), oob = scales::squish)+
+      ggsave(pngFile, width = 7, height = 7, dpi = 150, units = "in", device='png')
+  } 
+  else {
+    ggplot(sf_slopeAgg) +
+      geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+      scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)+
+      ggsave(pngFile, width = 7, height = 7, dpi = 150, units = "in", device='png')
+  }
 }
 
 #############
@@ -102,181 +119,24 @@ saveFigures("avgFieldSize","Field Size","ha", isOneColumn=TRUE, minThresh=0)
 saveFigures("avgFieldSize","Field Size (Large Fields)","ha", isOneColumn=TRUE, minThresh=5) #(area fields>5ha)
 saveFigures("avgFieldSize","Field Size (Small Fields)","ha", isOneColumn=TRUE, minThresh=0, maxThresh=5) #(area fields<5ha)
 # Diversity
-saveFigures("cropsPerCropHa", "Diversity", "crops/cultivated ha", isOneColumn = TRUE, minThresh=0)
-saveFigures("cropsPerHa", "Diversity", "crops/ha", isOneColumn = TRUE, minThresh=0)
+saveFigures("cropsPerCropHa", "Diversity", "#crops/- crop ha", isOneColumn = TRUE, minThresh=0)
+# saveFigures("cropsPerHa", "Diversity", "#crops/ha", isOneColumn = TRUE, minThresh=0)
 # Intensification
 saveFigures("intensification", "Intensification", "score", isOneColumn = TRUE)
 
 ##########################
 # Pollinators metrics
 ##########################
-# demand
-name = "Average \nPollinators \nDemand"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"demand")]
-df_metric$metric = df_metric[,"demand"]
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nPollinators' \nDemand \n(%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"demand")]
-df_metric$metric = df_metric[,"demand"]
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# intensification
-name = "Average \nIntensification \nScore"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"intensification")]
-df_metric$metric = rescaleVariable(df_metric[,"intensification"])
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = 0
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nIntensification \nScore (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_data[,c(baseCols,"intensification")]
-df_metric$metric = df_metric[,"intensification"]
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# abandoned
-name = "Average \nPercentage \nAbandoned \nLand"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",abandAgri)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nAbandoned \nLand (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",abandAgri)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAgg$slope = df_slopeAgg$slope *100 / df_meanAgg$mean # scale by the mean of the metric
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# Pollination score
-name = "Average \nPollination \nScore"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_pollModel[,c(baseCols,"ZonasNaturales_man0_mod0")]
-df_metric$metric = df_metric[,"ZonasNaturales_man0_mod0"]
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nPollination \nScore \n(1/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-df_metric        = df_pollModel[,c(baseCols,"ZonasNaturales_man0_mod0")]
-df_metric$metric = df_metric[,"ZonasNaturales_man0_mod0"]
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_pollModel[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
+# Threshold cropsPerCropHa>0 equals to the condition set in "mergeNewMetrics.R": cropArea > cropAreaThreshold (initially 0.5 hectares)
+# Demand
+saveFigures("demand","Pollinators - Demand","%", isOneColumn=TRUE, showAsPercentage = TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+# Poll score
+saveFigures("pollScore","Pollinators - Model","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+# Poll service
+saveFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa",squish=TRUE)
 # pollinators' independent/dependent crops
-name = "Average \nPercentage \nPollinator \nDependent \nCrops"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",pollDependent)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
-name = "Change in \nPollinator \nDependent \nCrops (%/yr)"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-columns          = paste0("prop_",pollDependent)
-df_metric        = df_data[,c(baseCols,columns)]
-df_metric$metric = rowSums(df_metric[,columns])
-df_metric$metric = df_metric$metric*100 # convert to percentage
-df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_slopeAgg      = merge(df_aggUnit, df_slope)
-df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-sf_slopeAgg      = merge(polys,df_slopeAggMean)
-ggplot(sf_slopeAgg) +
-  geom_sf(data = sf_slopeAgg, aes(fill = slope))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, name=name)
-
-# pollination service
-name = "Average \nPollination \nService \nScore"
-baseCols         = c("D1_HUS", "D2_NUM", "province", "YEA")
-demandThreshold  = 0.1 # set when calculating pollination service (pollService.R)
-df_metric        = df_data[df_data$demand>demandThreshold,c(baseCols,"pollService")]
-df_metric$metric = df_metric[,"pollService"]
-df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-df_meanAgg       = merge(df_aggUnit, df_mean)
-df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-sf_meanAgg       = merge(polys,df_meanAggMean)
-midpoint         = mean(df_meanAggMean$mean)
-ggplot(sf_meanAgg) +
-  geom_sf(data = sf_meanAgg, aes(fill = mean))+
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = midpoint, name=name)
-
+saveFigures(paste0("prop_",pollDependent),"Cropland - Pollinators - Dependent","%", showAsPercentage = TRUE)
+saveFigures(paste0("prop_",pollNotDepent),"Cropland - Pollinators - Not Dependent","%", showAsPercentage = TRUE)
 
 
 ########################
