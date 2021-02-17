@@ -29,29 +29,35 @@ write.csv(df_clean, file=paste0(paste0(dataFolder, "metrics_v2021-02.csv")),row.
 ###########################################
 # Add new columns from already calculated 
 ###########################################
-df_data = read.csv(paste0(dataFolder, "metrics_v2021-02.csv"), header=T)
+df_data           = read.csv(paste0(dataFolder, "metrics_v2021-02.csv"), header=T)
+cropAreaThreshold = 0.5 # define minimum crop cover to consider segments for these metrics (e.g. 0.5 hectares)
+cropColnames      = paste0("prop_",agriLand)
+cropArea          = rowSums(df_data[,cropColnames]) * df_data$segAreaNoWater
+selRows           = cropArea > cropAreaThreshold
 ##########################
 # INTENSIFICATION METRICS
 ##########################
+# Select only 
 # active agri land / sum(lowActivity, seminatural, abandoned)
-df_agriActive = df_data[,paste0("prop_",agriActive)]
-df_agriLowAct = df_data[,paste0("prop_",lowActivity)]
-df_seminatural= df_data[,paste0("prop_",seminatural)]
-df_abandoned  = df_data[,paste0("prop_",abandAgri)]
+df_agriActive = df_data[selRows,paste0("prop_",agriActive)]
+df_agriLowAct = df_data[selRows,paste0("prop_",lowActivity)]
+df_seminatural= df_data[selRows,paste0("prop_",seminatural)]
+df_abandoned  = df_data[selRows,paste0("prop_",abandAgri)]
 activeSum     = rowSums(df_agriActive)
-lowActSum     = rowSums(df_agriActive)+rowSums(df_seminatural)+rowSums(df_abandoned)
+lowActSum     = rowSums(df_agriLowAct)+rowSums(df_seminatural)+rowSums(df_abandoned)
 actIndex      = activeSum-lowActSum
 stActIndex    = scale(actIndex)
+hist(stActIndex)
 summary(stActIndex)
 # crop field size 
 columns     = "avgFieldSize"
-fieldSize   = df_data[,columns]
+fieldSize   = df_data[selRows,columns]
 stFieldSize = scale(fieldSize)
 hist(stFieldSize)
 summary(stFieldSize)
 # crop diversity
 columns     = "cropsPerCropHa"
-diversity   = -df_data[,columns] # change sign to go along with intensification
+diversity   = -df_data[selRows,columns] # change sign to go along with intensification
 stDiversity = scale(diversity)
 hist(stDiversity)
 summary(stDiversity)
@@ -62,22 +68,23 @@ summary(intensification)
 summary(scaledIntensif)
 
 # Save as a new column:
-df_data$intensification = scaledIntensif
+df_data$intensification = 0
+df_data[selRows,"intensification"] = scaledIntensif
 write.csv(df_data, file=paste0(dataFolder,"metrics_v2021-02.csv"),row.names=FALSE)
 
 ############
 # Diversity
 ############
-agriColnames = paste0("prop_",agriLand)
 baseCols     = c("D1_HUS","D2_NUM","YEA","segArea","segAreaNoWater")
-d            = df_data[,c(baseCols,agriColnames)]
-d$cropArea   = rowSums(df_data[,agriColnames]) * d$segAreaNoWater
-d$alpha      = apply(d[,agriColnames], 1, function(x) sum(x>0)) / d$segAreaNoWater
-d$alphaCropArea = apply(d[,agriColnames], 1, function(x) sum(x>0)) / d$cropArea
-d[d$cropArea<0.5, 'alphaCropArea'] = 0  # Set diversity to 0 in places where crop area is below certain threshold (e.g. 0.5 hectares)
+d            = df_data[selRows,c(baseCols,cropColnames)]
+d$cropArea   = rowSums(d[,cropColnames]) * d$segAreaNoWater
+d$alpha      = apply(d[,cropColnames], 1, function(x) sum(x>0)) / d$segAreaNoWater
+d$alphaCropArea = apply(d[,cropColnames], 1, function(x) sum(x>0)) / d$cropArea
 d[is.na(d)]  = 0
-df_data$cropsPerHa = d$alpha
-df_data$cropsPerCropHa = d$alphaCropArea
+df_data$cropsPerHa = 0
+df_data$cropsPerCropHa = 0
+df_data[selRows,"cropsPerHa"] = d$alpha
+df_data[selRows,"cropsPerCropHa"] = d$alphaCropArea
 write.csv(df_data, file=paste0(dataFolder,"metrics_v2021-02.csv"),row.names=FALSE)
 
 

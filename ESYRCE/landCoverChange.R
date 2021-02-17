@@ -32,37 +32,31 @@ if (!csvSaved) df_LCtransitions = getLandCoverTransitionsFromProportion(dataFile
 ################
 csvSaved = TRUE
 initYears = seq(2001,2018)
-df_LCtrans_byYear = list()
+list_LCtrans_byYear = list()
 for (i in seq(1,length(initYears))) {
   initYear = initYears[i]
   endYear  = initYear+1
-  if (csvSaved)  df_LCtrans_byYear[[i]] = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv"), row.names = 1)
-  if (!csvSaved) df_LCtrans_byYear[[i]] = getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics, timeInterval = c(initYear,endYear))
+  if (csvSaved)  list_LCtrans_byYear[[i]] = read.csv(paste0(dataFolder,"landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv"), row.names = 1)
+  if (!csvSaved) list_LCtrans_byYear[[i]] = getLandCoverTransitionsFromProportion(dataFile = dataFileMetrics, timeInterval = c(initYear,endYear))
 }
 for (i in seq(1,length(initYears))) {
   initYear = initYears[i]
   endYear  = initYear+1
   fileName = paste0("landCoverChange/landCoverChange_method2_",initYear,"-",endYear,".csv")
-  rownames(df_LCtrans_byYear[[i]]) = colnames(df_LCtrans_byYear[[i]])  
-  write.csv(df_LCtrans_byYear[[i]], file=paste0(dataFolder,fileName), row.names=TRUE)
+  rownames(list_LCtrans_byYear[[i]]) = colnames(list_LCtrans_byYear[[i]])  
+  write.csv(list_LCtrans_byYear[[i]], file=paste0(dataFolder,fileName), row.names=TRUE)
 }
 
 ############################
 # NORMALIZED TRANSITIONS
 ############################
-df_LCdestin = df_LCtransitions
-df_LCorigin = as.data.frame(t(df_LCdestin))
 # Normalized transitions can be read, at each row, as the probability of transition from the row lc type, to the columns land cover types -> destination probability
 # If df_LCtransitions is transposed, the normalization yields the probability of transition to the row lc type, from the columns land cover types -> origin probability
-df_LCdestin_prob = df_LCdestin*0
-for (lc in landcovertypes) {
-  if (rowSums(df_LCdestin[lc,]) > 0) df_LCdestin_prob[lc, ] = df_LCdestin[lc, ] /  rowSums(df_LCdestin[lc,])
-}
-df_LCtransitions_t = as.data.frame(t(df_LCtransitions))
-df_LCorigin_prob = df_LCorigin*0
-for (lc in landcovertypes) {
-  if (rowSums(df_LCorigin[lc,]) > 0) df_LCorigin_prob[lc, ] = df_LCorigin[lc, ] /  rowSums(df_LCorigin[lc,])
-}
+df_LCdestin = getLCdestinProb(df_LCtransitions)
+df_LCorigin = getLCoriginProb(df_LCtransitions)
+
+# by year
+list_LCdestin_prob_byYear = lapply(list_LCtrans_byYear, getLCdestinProb)
 
 ############################
 # BY GROUP OF LANDCOVER
@@ -85,7 +79,7 @@ for (lc in landcovertypes) {
 #               c("fallow",other),
 #               c("improductive",improductive),
 #               c("notAgri",notAgri))
-groups = list(c("Active Agri",agriActive),
+groups = list(c("Active Cropland",agriActive),
               c("Fallow", lowActivity),
               c("Forested",c(forested,otherWoodyCrop)),
               c("Pasture",pasture),
@@ -114,52 +108,43 @@ paste0("Land cover types not considered:",landcovertypes[!(landcovertypes %in% g
 # groups = list.append(groups,c("water",c("water")),c("other",c("other"))) 
 
 # ORIGIN
-df_LCorigin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
-rownames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
-colnames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
-for(groupRow in groups) {
-  for (groupCol in groups)
-  {
-    rowName    = groupRow[1]
-    colName    = groupCol[1]
-    lcTypesRow = groupRow[2:length(groupRow)]
-    lcTypesCol = groupCol[2:length(groupCol)]
-    df_subset  = df_LCorigin[lcTypesRow, lcTypesCol] 
-    df_LCorigin_gr[rowName,colName] = sum(df_subset)
-  }
-}
-df_LCorigin_gr_norm = df_LCorigin_gr*0
-for (group in rownames(df_LCorigin_gr)) {
-  if (rowSums(df_LCorigin_gr[group,]) > 0) df_LCorigin_gr_norm[group, ] = df_LCorigin_gr[group, ] /  rowSums(df_LCorigin_gr[group,])
-}
-
+df_LCorigin_gr = getLCoriginProbByGroup(df_LCtransitions)
 # DESTINATION
-df_LCdestin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
-rownames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
-colnames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
-for(groupRow in groups) {
-  for (groupCol in groups)
-  {
-    rowName    = groupRow[1]
-    colName    = groupCol[1]
-    lcTypesRow = groupRow[2:length(groupRow)]
-    lcTypesCol = groupCol[2:length(groupCol)]
-    df_subset  = df_LCdestin[lcTypesRow, lcTypesCol] 
-    df_LCdestin_gr[rowName,colName] = sum(df_subset)
-  }
-}
-df_LCdestin_gr_norm = df_LCdestin_gr*0
-for (group in rownames(df_LCdestin_gr)) {
-  if (rowSums(df_LCdestin_gr[group,]) > 0) df_LCdestin_gr_norm[group, ] = df_LCdestin_gr[group, ] /  rowSums(df_LCdestin_gr[group,])
-}
-
+df_LCdestin_gr = getLCdestinProbByGroup(df_LCtransitions)
+# by year
+list_LCdestin_gr_byYear = lapply(list_LCtrans_byYear, getLCdestinProbByGroup)
 
 ############
 # PLOTS
 ############
 figFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
-removeNoTransition = TRUE
+removeNoTransition = FALSE
 abbreviateNames = FALSE
+
+# Evolution by year
+title = "Active Cropland to Fallow transition"
+df_LCdestin_gr_byYear     = list.rbind(list_LCdestin_gr_byYear)
+target                    = "Active Cropland"
+plotTargets               = c("Active Cropland","Fallow")
+selRows                   = grepl( target, rownames(df_LCdestin_gr_byYear), fixed = TRUE)
+df_LCdestin_Target_byYear = as.data.frame(t(df_LCdestin_gr_byYear[selRows, ]))
+colnames(df_LCdestin_Target_byYear) = initYears+1 
+df_melt <- melt(as.matrix(df_LCdestin_Target_byYear))
+colnames(df_melt) = c("final","year","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$final != target , ]
+df_melt = df_melt [df_melt$final %in% plotTargets, ]  
+df_melt %>%
+  mutate(bin = value > 0.5) %>%
+ggplot(aes(year, value, group=factor(final))) + 
+  geom_line(aes(color=factor(final))) +
+  geom_smooth(method='lm', formula= y~x)+labs(colour="Land cover") +
+  facet_grid(bin ~ ., scale='free_y') +
+  theme(strip.text.y = element_blank())+    
+  ylab("Probability") +
+  xlab("Year") +
+  ggtitle(title)
+pngFile = paste0(figFolder,'landcover/',title,".png")
+ggsave(pngFile)
 
 # Origin
 target = "Seminatural"
@@ -173,15 +158,14 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
     ylab("Percentage") +
     xlab("Land cover category") +
     geom_bar(stat="identity") + 
-    ggtitle(title))
+    ggtitle(title)
 # Save in a png file
-png(paste0(figFolder,title,".png")) 
-print(p)
-dev.off() 
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile)
 
 # Destination agri land
 target = "Agri Land"
@@ -195,15 +179,14 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
     ylab("Percentage") +
     xlab("Land cover category") +
     geom_bar(stat="identity") + 
-    ggtitle(title))
+    ggtitle(title)
 # Save in a png file
-png(paste0(figFolder,title,".png")) 
-p
-dev.off() 
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile)
 
 # Origin poll-dep crops
 target = "Poll-dep"
@@ -217,13 +200,12 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+ggplot(data=df_melt_sel, aes(x=final, y=value)) +
     geom_bar(stat="identity") + 
-    ggtitle(title)) + ylim(0,0.25)
+    ggtitle(title) + ylim(0,0.25)
 # Save in a png file
-png(paste0(figFolder,title,".png")) 
-p
-dev.off() 
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile)
 
 # Origin poll-indep crops
 target = "Poll-indep"
@@ -237,13 +219,12 @@ if (abbreviateNames) {
   df_melt$final  = abbreviate(df_melt$final)  
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
-(p<-ggplot(data=df_melt_sel, aes(x=final, y=value)) +
+ggplot(data=df_melt_sel, aes(x=final, y=value)) +
     geom_bar(stat="identity") + 
-    ggtitle(title)) + ylim(0,0.25)
+    ggtitle(title) + ylim(0,0.25)
 # Save in a png file
-png(paste0(figFolder,title,".png")) 
-p
-dev.off() 
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile)
 
 # All groups
 # (p1<-ggplot(data=df_melt, aes(x=final, y=value)) +

@@ -257,6 +257,129 @@ getLandCoverTransitionsFromProportion = function(dataFile, timeInterval=c(1900,2
   return(df_LCtransitions)
 }
 
+####################################
+# INPUT: data frame of area for each land cover transition (row=origin, col=destination)
+# OUTPUT: data frame with the probability of the transition with row=destination and col=origin
+####################################
+getLCoriginProb = function(df_LCtransitions) {
+  df_LCorigin = as.data.frame(t(df_LCtransitions))
+  df_LCorigin_prob = df_LCorigin*0
+  for (lc in landcovertypes) {
+    if (rowSums(df_LCorigin[lc,]) > 0) df_LCorigin_prob[lc, ] = df_LCorigin[lc, ] /  rowSums(df_LCorigin[lc,])
+  }
+  return(df_LCorigin_prob)
+}
+
+####################################
+# INPUT: data frame of area for each land cover transition (row=origin, col=destination)
+# OUTPUT: data frame with the probability of the transition with row=origin and col=destination
+####################################
+getLCdestinProb = function(df_LCtransitions) {
+  df_LCdestin = df_LCtransitions
+  df_LCdestin_prob = df_LCdestin*0
+  for (lc in landcovertypes) {
+    if (rowSums(df_LCdestin[lc,]) > 0) df_LCdestin_prob[lc, ] = df_LCdestin[lc, ] /  rowSums(df_LCdestin[lc,])
+  }
+  return(df_LCdestin_prob)
+}
+
+####################################
+# INPUT: data frame of area for each land cover transition (row=origin, col=destination)
+# OUTPUT: data frame with the probability of the transition with row=destination and col=origin
+# by group of land cover types (groups in he variable 'groups')
+####################################
+getLCoriginProbByGroup = function(df_LCtransitions) {
+  df_LCorigin = as.data.frame(t(df_LCtransitions))
+  df_LCorigin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
+  rownames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
+  colnames(df_LCorigin_gr) = lapply(groups, `[[`, 1)
+  for(groupRow in groups) {
+    for (groupCol in groups)
+    {
+      rowName    = groupRow[1]
+      colName    = groupCol[1]
+      lcTypesRow = groupRow[2:length(groupRow)]
+      lcTypesCol = groupCol[2:length(groupCol)]
+      df_subset  = df_LCorigin[lcTypesRow, lcTypesCol] 
+      df_LCorigin_gr[rowName,colName] = sum(df_subset)
+    }
+  }
+  df_LCorigin_gr_norm = df_LCorigin_gr*0
+  for (group in rownames(df_LCorigin_gr)) {
+    if (rowSums(df_LCorigin_gr[group,]) > 0) df_LCorigin_gr_norm[group, ] = df_LCorigin_gr[group, ] /  rowSums(df_LCorigin_gr[group,])
+  }
+  return(df_LCorigin_gr_norm)
+}
+####################################
+# INPUT: data frame of area for each land cover transition (row=origin, col=destination)
+# OUTPUT: data frame with the probability of the transition with row=origin and col=destination
+# by group of land cover types (groups in he variable 'groups')
+####################################
+getLCdestinProbByGroup = function(df_LCtransitions) {
+  df_LCdestin = df_LCtransitions
+  df_LCdestin_gr = data.frame(matrix(0, ncol = length(groups), nrow = length(groups)))
+  rownames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
+  colnames(df_LCdestin_gr) = lapply(groups, `[[`, 1)
+  for(groupRow in groups) {
+    for (groupCol in groups)
+    {
+      rowName    = groupRow[1]
+      colName    = groupCol[1]
+      lcTypesRow = groupRow[2:length(groupRow)]
+      lcTypesCol = groupCol[2:length(groupCol)]
+      df_subset  = df_LCdestin[lcTypesRow, lcTypesCol] 
+      df_LCdestin_gr[rowName,colName] = sum(df_subset)
+    }
+  }
+  df_LCdestin_gr_norm = df_LCdestin_gr*0
+  for (group in rownames(df_LCdestin_gr)) {
+    if (rowSums(df_LCdestin_gr[group,]) > 0) df_LCdestin_gr_norm[group, ] = df_LCdestin_gr[group, ] /  rowSums(df_LCdestin_gr[group,])
+  }
+  return(df_LCdestin_gr_norm)
+}
+
+library(scales)
+squash_axis <- function(from, to, factor) { 
+  # A transformation function that squashes the range of [from, to] by factor on a given axis 
+  
+  # Args:
+  #   from: left end of the axis
+  #   to: right end of the axis
+  #   factor: the compression factor of the range [from, to]
+  #
+  # Returns:
+  #   A transformation called "squash_axis", which is capsulated by trans_new() function
+  
+  trans <- function(x) {    
+    # get indices for the relevant regions
+    isq <- x > from & x < to
+    ito <- x >= to
+    
+    # apply transformation
+    x[isq] <- from + (x[isq] - from)/factor
+    x[ito] <- from + (to - from)/factor + (x[ito] - to)
+    
+    return(x)
+  }
+  
+  inv <- function(x) {
+    
+    # get indices for the relevant regions
+    isq <- x > from & x < from + (to - from)/factor
+    ito <- x >= from + (to - from)/factor
+    
+    # apply transformation
+    x[isq] <- from + (x[isq] - from) * factor
+    x[ito] <- to + (x[ito] - (from + (to - from)/factor))
+    
+    return(x)
+  }
+  
+  # return the transformation
+  return(trans_new("squash_axis", trans, inv))
+}
+
+
 # Counts visits to each segment
 countVisitSegment <- function(data) {
   x = data$YEA # xaxis: years

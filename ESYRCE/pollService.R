@@ -10,9 +10,6 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
-
 # Define which years of the interval 2001-2019 correspond to which version of CORINE
 corine2000 = seq(1996,2003)
 corine2006 = seq(2004,2009)
@@ -20,20 +17,15 @@ corine2012 = seq(2010,2015)
 corine2018 = seq(2016,2021)
 
 # Read datasets
-dataFile     = paste0(dataFolder, "geo_metrics_climate_intensif_20-12-18.csv")
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
 df_data      = read.csv(dataFile, header=T)
-modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
+modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_20-12-18.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
 #######################
 # Pollination service 
 #######################
-# 1. Calculate as (pollinator score) - (demand), but set to 0 places where there is low demand
-
-# Identify places with low demand
-threshold = 0.1
-lowDemand = df_data$demand < threshold
-
 # Get pollinators' score at every point with demand larger than threshold
 model = "ZonasNaturales_man0_mod0"
 getPollScore = function(x) {
@@ -48,15 +40,24 @@ getPollScore = function(x) {
   pollScore = df_pollModel[selected,model] 
   return(pollScore)
 }
+
+############
+# 1. Calculate as (pollinator score) - (demand), but set to 0 places where there is low demand
+# Identify places with low demand
+threshold = 0.1
+lowDemand = df_data$demand < threshold
+
 df_data$pollScore = 0
 pollScore = apply(df_data[!lowDemand,], 1, FUN = getPollScore) 
 df_data[!lowDemand,"pollScore"] = pollScore
-
 # Get value of the service
 df_data$pollService = 0
 df_data[!lowDemand, "pollService"] = df_data[!lowDemand, "pollScore"] - df_data[!lowDemand,"demand"]
 
+############
 # 2. Calculate as (2xy - y^2) where x=(pollinator score), y=(demand)
+pollScore = apply(df_data, 1, FUN = getPollScore) 
+df_data[!lowDemand,"pollScore"] = pollScore
 x = df_data$pollScore
 y = df_data$demand
 df_data$pollService2 = 2*x*y - y*y
