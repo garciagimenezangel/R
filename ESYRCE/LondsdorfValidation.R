@@ -107,36 +107,57 @@ model <- lme(Zabundance ~ Lonsdorf.INVEST.CORINE_man0_mod1, random = ~1|study_id
 ##############################
 # PLOTS
 ##############################
-term = "Lonsdorf.ZonasNaturales_man0_mod1" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
-term = "Lonsdorf.INVEST.CORINE_man0_mod1" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
+term1 = "Lonsdorf.INVEST.CORINE_man0_mod0" # write predictor used here, e.g. "Lonsdorf.INVEST.CORINE_man0_mod1"
 # Predicted values
-pred.mm <- ggpredict(model, terms = term)  # this gives overall predictions for the model
-(ggplot(pred.mm) + 
+pred1.mm <- ggpredict(m1, terms = term1)  # this gives overall predictions for the model
+p1 <- ggplot(pred1.mm) + 
     geom_line(aes(x = x, y = predicted)) +          # slope
     geom_ribbon(aes(x = x, ymin = predicted - std.error, ymax = predicted + std.error), 
                 fill = "lightgrey", alpha = 0.5) +  # error band
     geom_point(data = dat,                      # adding the raw data (scaled values)
-               aes(x = Lonsdorf.INVEST.CORINE_man0_mod1, y = ab_wild_comparable, colour = crop)) + 
+               aes(x = Lonsdorf.INVEST.CORINE_man0_mod0, y = ab_wild_comparable, colour = crop)) + 
     xlab("Predicted") +      
     ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
     theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
     scale_fill_discrete(name="Crop") +  
     theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold"))
-)
 
-# Visualise random effects 
-(re.effects <- plot_model(model, type = "re", show.values = TRUE))
-
-# Linear fit
-scatter.smooth(dat$ab_wild_comparable ~ dat$Lonsdorf.ZonasNaturales_man0_mod0)
-(p2<-ggplot(dat, aes(Lonsdorf.INVEST.CORINE_man0_mod0, ab_wild_comparable)) +
-    geom_point(size=2.5, shape=21,color = "black", aes(fill=factor(crop))) +
-    geom_smooth(method="lm", size=1, se=TRUE, color = "black", alpha=0.4) +
+term2 = "Lonsdorf.ZonasNaturales_man0_mod0" 
+# Predicted values
+pred2.mm <- ggpredict(m2, terms = term2)  # this gives overall predictions for the model
+p2<- ggplot(pred2.mm) + 
+    geom_line(aes(x = x, y = predicted)) +          # slope
+    geom_ribbon(aes(x = x, ymin = predicted - std.error, ymax = predicted + std.error), 
+                fill = "lightgrey", alpha = 0.5) +  # error band
+    geom_point(data = dat,                      # adding the raw data (scaled values)
+               aes(x = Lonsdorf.ZonasNaturales_man0_mod0, y = ab_wild_comparable, colour = crop)) + 
     xlab("Predicted") +      
     ylab("Observed abundance") + theme_bw()  + theme (legend.position= "right") +
     theme(text = element_text(size = 18), axis.text=element_text(size=rel(1)), axis.title=element_text(size=rel(1.3), face="bold")) + 
     scale_fill_discrete(name="Crop") +  
-    theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold")))
+    theme(legend.text = element_text(size = 14, face = "italic"), legend.title = element_text(size=15, face = "bold"))
+
+
+#extract same legend for both plots
+prow <- cowplot::plot_grid( p1 + theme(legend.position="none"),
+                            p2 + theme(legend.position="none"),
+                            align = 'vh',
+                            labels = c("A", "B"),
+                            hjust = -1,
+                            nrow = 1
+)
+
+# extract the legend from one of the plots
+legend_b <- cowplot::get_legend(p1 + theme(legend.position="right"))
+
+# add the legend underneath the row we made earlier. Give it 10% of the height
+# of one plot (via rel_heights).
+FigureS1 <- cowplot::plot_grid( prow, legend_b, ncol = 2, rel_widths = c(2, .75))
+#################
+# Save variables
+#################
+save(r2, r2b, FigureS1, file = "validationPollScore.RData")
+
 
 ##############################
 # TABLES
@@ -148,6 +169,7 @@ stargazer(model, type = "text",
           +           digit.separator = "")
 
 
+
 ###############
 # ANOVA
 ###############
@@ -156,7 +178,6 @@ reduced.model <- glmer.nb(ab_wild_comparable ~ 1 + (1|study_id), data = dat, na.
 anova(reduced.model, full.model)
 # https://ourcodingclub.github.io/tutorials/mixed-models/#what: 
 # Models can also be compared using the AICc function from the AICcmodavg package. The Akaike Information Criterion (AIC) is a measure of model quality. AICc corrects for bias created by small sample size when estimating AIC. Generally, if models are within 2 AICc units of each other they are very similar. Within 5 units they are quite similar, over 10 units difference and you can probably be happy with the model with lower AICc. As with p-values though, there is no "hard line" that's always correct.
-
 
 
 

@@ -86,6 +86,14 @@ groups = list(c("Active Cropland",agriActive),
               c("Abandoned",abandAgri),
               c("Unproductive",improductive),
               c("Artificial",notAgri))
+groups = list(c("Herbaceous Crop",c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
+                                    ornamental, nursery)),
+              c("Fallow", lowActivity),
+              c("Forested",c(forested,otherWoodyCrop)),
+              c("Pasture",pasture),
+              c("Abandoned",abandAgri),
+              c("Unproductive",improductive),
+              c("Artificial",notAgri))
 groups = list(c("Agri Land",agriLand),
               c("Seminatural",seminatural),
               c("Abandoned",abandAgri),
@@ -122,10 +130,10 @@ removeNoTransition = FALSE
 abbreviateNames = FALSE
 
 # Evolution by year
-title = "Active Cropland to Fallow transition"
+title = "Transition From Herbaceous Crops"
 df_LCdestin_gr_byYear     = list.rbind(list_LCdestin_gr_byYear)
-target                    = "Active Cropland"
-plotTargets               = c("Active Cropland","Fallow")
+target                    = "Herbaceous Crop"
+plotTargets               = c("Herbaceous Crop","Fallow")
 selRows                   = grepl( target, rownames(df_LCdestin_gr_byYear), fixed = TRUE)
 df_LCdestin_Target_byYear = as.data.frame(t(df_LCdestin_gr_byYear[selRows, ]))
 colnames(df_LCdestin_Target_byYear) = initYears+1 
@@ -137,13 +145,13 @@ df_melt %>%
   mutate(bin = value > 0.5) %>%
 ggplot(aes(year, value, group=factor(final))) + 
   geom_line(aes(color=factor(final))) +
-  geom_smooth(method='lm', formula= y~x)+labs(colour="Land cover") +
+  geom_smooth(method='lm', formula= y~x)+labs(colour="To") +
   facet_grid(bin ~ ., scale='free_y') +
   theme(strip.text.y = element_blank())+    
   ylab("Probability") +
   xlab("Year") +
   ggtitle(title)
-pngFile = paste0(figFolder,'landcover/',title,".png")
+pngFile = paste0(figFolder,'cropland/',title,".png")
 ggsave(pngFile)
 
 # Origin

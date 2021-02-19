@@ -3,6 +3,8 @@ library(gstat)
 library(sf)
 library(ggplot2)
 library(scales)
+library(raster)
+library(rasterVis)
 rm(list=ls())
 ###########
 
@@ -24,8 +26,8 @@ GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 # Read datasets
 dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
 df_data      = read.csv(dataFile, header=T)
-modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_20-12-18.csv")
-df_pollModel = read.csv(modelFile, header=T)
+# modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_20-12-18.csv")
+# df_pollModel = read.csv(modelFile, header=T)
 
 # Regions
 # fileShp = "C:/Users/angel.gimenez/DATA/Administrative areas/ESP_adm/ESP_adm2.shp"
@@ -138,6 +140,22 @@ saveFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, mi
 saveFigures(paste0("prop_",pollDependent),"Cropland - Pollinators - Dependent","%", showAsPercentage = TRUE)
 saveFigures(paste0("prop_",pollNotDepent),"Cropland - Pollinators - Not Dependent","%", showAsPercentage = TRUE)
 
+########################
+# Pollination Service
+########################
+pServ = raster(paste0(figuresFolder,"pollinators/PollService.tif"))
+qq    = quantile(pServ, probs = seq(0,1,0.1), names=FALSE)
+png(paste0(figuresFolder,"pollinators/pollService.png"))
+levelplot(pServ, par.settings=BuRdTheme(), at=qq, margin=F)
+dev.off()
+
+########################
+# Pollinators score
+########################
+pScore = raster(paste0(figuresFolder,"pollinators/PollScore_ZonasNaturales2018_man0_mod0_Spain.tif"))
+png(paste0(figuresFolder,"pollinators/pollScore.png"))
+levelplot(pScore, par.settings=BuRdTheme(), margin=F)
+dev.off()
 
 ########################
 # Particular crops area
