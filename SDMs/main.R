@@ -14,17 +14,17 @@ library(dplyr)
 library(rlist)
 
 # Load species configuration
-source("config_species/bombus_terrestris.R")
+source("config_species/bombus_lapidarius.R")
 source("config_species/commonSettings.R")
 
 ###############################
-# Load GBIF data: presence-only
+# Load GBIF data: presence-only. If #records found > (limit=100000), time span must be splitted 
 if (gbifReady) {
   dfGbif = read.csv(file = paste0(dataDir,csvGbif), header = TRUE)
 } else {
   # Download and save GBIF data
   dfGbif = downloadGbifData(species, timeSpan)
-  dfGbif = removeNAandDupLocations(dfGbif, "lon", "lat", 4)
+  dfGbif = removeNAandDupLocations(dfGbif, 4)
   write.csv(dfGbif, paste0(dataDir, csvGbif), row.names=FALSE)
 }
 

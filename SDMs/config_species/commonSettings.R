@@ -5,7 +5,8 @@ yrTo    = 2100
 
 # Directories
 observDir  = "C:/Users/angel/git/OBservData/Final_Data/"
-sdmDir     = "C:/Users/angel/DATA/SDMs/v2-Feb2021/"
+# sdmDir     = "C:/Users/angel/DATA/SDMs/v2-Feb2021/"
+sdmDir     = "G:/My Drive/PROJECTS/OBSERV/SDMs/v2-Feb2021/"
 speciesDir = paste0(gsub(" ","_",species), "/")
 dataDir    = paste0(sdmDir, speciesDir);  
 dir.create(file.path(sdmDir, speciesDir), showWarnings = FALSE)

@@ -216,7 +216,7 @@ getCorinePercentages <- function(x, coords_digits=4) {
   return(df)
 }
 
-removeNAandDupLocations <- function(df, lon, lat, coords_digits = 4) {
+removeNAandDupLocations <- function(df, coords_digits = 4) {
   df = df[!is.na(df$lat) & !is.na(df$lon),]
   df$round_lon = round(df$lon, digits=coords_digits)
   df$round_lat = round(df$lat, digits=coords_digits)
@@ -239,7 +239,7 @@ cleanSamplingYear <- function(df, yrFrom, yrTo) {
 
 clean <- function(df, yrFrom=1800, yrTo=2100, minDec=3, lon="lon", lat="lat", species="pollinator", coords_digits = 4) {
   df = cleanSamplingYear(df, yrFrom, yrTo)
-  df = removeNAandDupLocations(df, "lon", "lat", coords_digits)
+  df = removeNAandDupLocations(df, coords_digits)
   # Use cleanCoordinates package
   rownames(df)<-1:nrow(df)
   if (species == "") {
