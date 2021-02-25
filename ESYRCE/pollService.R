@@ -20,7 +20,7 @@ corine2018 = seq(2016,2021)
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
 df_data      = read.csv(dataFile, header=T)
-modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_20-12-18.csv")
+modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_21-02-25.csv")
 df_pollModel = read.csv(modelFile, header=T)
 
 #######################
@@ -62,7 +62,7 @@ y = df_data$demand
 df_data$pollService2 = 2*x*y - y*y
 
 # Save data 
-write.csv(df_data, file=paste0(dataFolder, "geo_metrics_climate_intensif_pollService_20-12-18.csv"), row.names=FALSE)
+write.csv(df_data, file=paste0(dataFolder, "metrics_v2021-02-25.csv"), row.names=FALSE)
 
 
 

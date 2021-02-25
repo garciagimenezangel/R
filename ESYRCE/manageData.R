@@ -14,7 +14,7 @@ dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
 df_data      = read.csv(dataFile, header=T)
 # modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
 # df_pollModel = read.csv(modelFile, header=T)
@@ -38,8 +38,9 @@ nullRegions      = lookupCoordRegions[indNullRegions,]
 nullCoordRegions = do.call("rbind", apply(nullRegions,1,calculateRegion))
 lookupCoordRegions[indNullRegions,] = nullCoordRegions
 
-# Save file
-write.csv(lookupCoordRegions, file=paste0(dataFolder,"lookup_coordinates_regions.csv"),row.names=FALSE)
+# Read/Save file
+write.csv(lookupCoordRegions, file=paste0(dataFolder,"intermediateProducts/lookup_coordinates_regions.csv"),row.names=FALSE)
+lookupCoordRegions = read.csv(file=paste0(dataFolder,"intermediateProducts/lookup_coordinates_regions.csv"),header=T)
 
 # Add coordinates and region by merging dataframe with lookup table
 df_coords = merge(df_data, lookupCoordRegions, by=c("D1_HUS","D2_NUM"), all.x = TRUE)
@@ -54,26 +55,22 @@ modelName    = "ZonasNaturales_man0_mod0"
 modelsByYear = c("ZonasNaturales2000_man0_mod0","ZonasNaturales2006_man0_mod0","ZonasNaturales2012_man0_mod0","ZonasNaturales2018_man0_mod0")
 years        = c(2000,2006,2012,2018) # MUST correspond with modelNames
 df_pollModel = data.frame(matrix(ncol = 8, nrow = 0))
-colnames(df_pollModel) <- c("D1_HUS", "D2_NUM","longitude","latitude", "YEA", "province", "region", modelName)
+colnames(df_pollModel) <- c(colnames(lookupCoordRegions), "YEA", modelName)
 for (it in seq(1,length(years))) {
-  df_pollModelYear             = lookupCoordRegions[,c("D1_HUS", "D2_NUM","longitude","latitude","province","region")]
-  df_pollModelYear[,"YEA"]     = years[it]
-  df_pollModelYear[,modelName] = NA
+  # Read model values
   modelFile = paste0(GEEFolder, modelsByYear[it], ".csv") 
   df_model  = read.csv(modelFile, header=T)
   df_model  = df_model %>% dplyr::select(-c("system.index",".geo"))
-  df_model  = df_model %>% rename_at(vars(c("first")), ~ c(modelName))
-  digits = 5
-  while(digits>2) { 
-    indNotFound = is.na(df_pollModelYear[,modelName])  # some points are not found, decrease precision and try again
-    df_aux = df_pollModelYear[indNotFound,c("longitude","latitude")]
-    df_aux = addModelValues(df_aux, df_model, digits) 
-    df_pollModelYear[indNotFound, modelName] = df_aux[,modelName]
-    digits = digits-1
-  }
+  df_model  = df_model %>% rename_at(vars(c("first")), ~ c("modelValue"))
+  # Define data frame to store the values of the model linked to segments (D1_HUS, D2_NUM)
+  df_pollModelYear = lookupCoordRegions
+  df_pollModelYear[,"YEA"]     = years[it]
+  # Assign values to segments (D1_HUS, D2_NUM) using coordinates
+  modelValues = apply(df_pollModelYear, 1, getModelValue)
+  df_pollModelYear[,modelName] = modelValues
   df_pollModel = rbind(df_pollModel, df_pollModelYear)
 }
-write.csv(df_pollModel, file=paste0(dataFolder,"geo_model_20-12-18.csv"),row.names=FALSE)
+write.csv(df_pollModel, file=paste0(dataFolder,"intermediateProducts/geo_model_21-02-25.csv"),row.names=FALSE)
 
 
 

@@ -2,6 +2,7 @@ library(rgeos)
 library(sp)
 library(rgdal)
 library(tidyverse)
+library(DescTools)
 source("./categories.R")
 
 ####################################
@@ -103,24 +104,22 @@ calculateRegion <- function(data) {
 
 ####################################
 # INPUT: 
-# - dataframe with locations [longitude, latitude]
-# - dataframe with model values at those locations
-# - digits to round coordinates
-# OUTPUT: original dataset with added column with model values
+# - row from data frame with coordinates
+# - a previously defined data frame 'df_model' with the values of the model at locations
+# OUTPUT: original row with added column with model values
 ####################################
-addModelValues <- function(df_base, df_model, digits) {
-  df_model = roundCoordinates(df_model,digits)
-  df_base  = roundCoordinates(df_base,digits)
-  df_out   = merge(df_base, df_model, by=c("longitude","latitude"), all.x = TRUE)
-  if (nrow(df_base) != nrow(df_out)) print("ERROR addModelValues-> CHECK") # Sanity check
-  return(df_out)
-}
-roundCoordinates <- function(data, digits) {
-  data$longitude = as.numeric(data$longitude)
-  data$latitude  = as.numeric(data$latitude)
-  data[,"longitude"] = round(data$longitude, digits=digits)
-  data[,"latitude"]  = round(data$latitude, digits=digits)
-  return(data)
+getModelValue <- function(row) {
+  lon = as.numeric(row["longitude"])
+  lat = as.numeric(row["latitude"])
+  sel = which( sqrt( (df_model$longitude-lon)^2 + (df_model$latitude-lat)^2 ) < 0.001 ) # around 100m precision
+  if (length(sel) == 1) {
+    out = df_model[sel,"modelValue"]
+  }
+  else {
+    out = NA
+    print(paste("Warning getModelValue():","Longitude:",lon, "...Latitude:",lat))
+  }
+  return(out)
 }
 
 
