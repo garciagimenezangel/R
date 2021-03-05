@@ -1,10 +1,10 @@
 ######################################################
 
 # Folders
-Rasters_root = "C:/Users/angel/DATA/Output Models/Rasters/"
-GEE_root = "C:/Users/angel/DATA/Output Models/GEE/"
+Rasters_root = "G:/My Drive/PROJECTS/OBSERV/Modelling/Results/Output Models/Rasters/"
+GEE_root = "G:/My Drive/PROJECTS/OBSERV/Modelling/Results/Output Models/GEE/"
 field_data_folder = "C:/Users/angel/git/OBservData/Final_Data/"
-output_folder = "C:/Users/angel/DATA/Processed modeldata/"
+output_folder = "G:/My Drive/PROJECTS/OBSERV/Modelling/Results/Processed modeldata/"
 
 # Column names that will be in datasets and in the processed geodata tables
 base_col_names = c("study_id", "site_id", "sampling_year", "latitude", "longitude") 

@@ -14,8 +14,28 @@ library(dplyr)
 library(rlist)
 
 # Load species configuration
-source("config_species/bombus_lapidarius.R")
+source("config_species/lasioglossum_calceatum.R")
 source("config_species/commonSettings.R")
+# //var species = "BombusTerrestris"; 
+# //var species = "BombusPratorum";
+# //var species = "BombusPascuorum"; 
+# //var species = "BombusHortorum";
+# //var species = "BombusLapidarius";
+# //var species = "BombusHypnorum";
+# //var species = "AndrenaCarantonica";
+# //var species = "AndrenaChrysosceles";
+# //var species = "AndrenaDorsata";
+# //var species = "AndrenaFlavipes";
+# //var species = "AndrenaMinutula";
+# //var species = "AndrenaCineraria";
+# //var species = "AndrenaFulva";
+# //var species = "AndrenaNitida";
+# //var species = "AndrenaHaemorrhoa";
+# //var species = "LasioglossumPolitum"; 
+# //var species = "LasioglossumMorio";
+# //var species = "LasioglossumMalachurum";
+# //var species = "LasioglossumCalceatum";
+# //var species = "OsmiaBicornis";
 
 ###############################
 # Load GBIF data: presence-only. If #records found > (limit=100000), time span must be splitted 

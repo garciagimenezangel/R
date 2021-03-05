@@ -6,6 +6,7 @@ library(scales)
 library(raster)
 library(rasterVis)
 library(wesanderson)
+library(cowplot)
 rm(list=ls())
 ###########
 
@@ -54,8 +55,7 @@ getFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercenta
   if (columnThresh == "") { # use metric to set thresholds
     df_metric = df_metric[df_metric$metric > minThresh,]
     df_metric = df_metric[df_metric$metric < maxThresh,]
-  }
-  else { # use columnThresh to set thresholds
+  } else { # use columnThresh to set thresholds
     df_metric = df_metric[df_data[,columnThresh] > minThresh,]
     df_metric = df_metric[df_data[,columnThresh] < maxThresh,]
   }
@@ -151,7 +151,7 @@ diversity    = getFigures("cropsPerCropHa", "Diversity", "#crops/- crop ha", isO
 avgFieldSize = getFigures("avgFieldSize","Field Size","ha", isOneColumn=TRUE, minThresh=0, slopeMin = -3, slopeMax = 3, squish = T)
 cropland     = getFigures(paste0("prop_",agriLand), "Cropland", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
 seminatPlot  = getFigures(paste0("prop_",seminatural), "Seminatural", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-pollService  = getFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa", slopeMin = -3, slopeMax = 3, squish = T)
+pollService  = getFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, columnThresh="cropsPerCropHa", slopeMin = -3, slopeMax = 3, squish = T)
 pollScore    = getFigures("pollScore","Pollinators - Model","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa", slopeMin = -3, slopeMax = 3, squish = T)
 
 prowMain <- cowplot::plot_grid( diversity[[2]]    + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
@@ -188,8 +188,8 @@ prowSupp <- cowplot::plot_grid( croplandDependent[[2]] + theme(legend.position="
                                 meadowPlot[[2]]        + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
                                 pasturePlot[[2]]       + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
                             align = 'vh',
-                            hjust = -1,
-                            labels = c("Poll. Dep. Cropland", "Poll. Not Dep. Cropland", "Edge Density", "Forest", "Meadow", "Pasture"),
+                            hjust = 0,
+                            labels = c("Cropland Poll. Dep.", "Cropland Poll. Not Dep.", "Edge Density", "Forest", "Meadow", "Pasture"),
                             nrow = 3)
 legend <- get_legend(
   croplandDependent[[2]] + theme(legend.box.margin = margin(0, 0, 0, 12))

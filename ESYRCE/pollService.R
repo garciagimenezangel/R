@@ -18,7 +18,7 @@ corine2018 = seq(2016,2021)
 
 # Read datasets
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFile     = paste0(dataFolder, "metrics_v2021-02.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
 df_data      = read.csv(dataFile, header=T)
 modelFile    = paste0(dataFolder, "intermediateProducts/geo_model_21-02-25.csv")
 df_pollModel = read.csv(modelFile, header=T)
@@ -60,6 +60,12 @@ df_data$pollScore = pollScore
 x = df_data$pollScore
 y = df_data$demand
 df_data$pollService2 = 2*x*y - y*y
+
+############
+# 3. Calculate as [exp(2xy - y^2)-1]/[exp(1)-1] where x=(pollinator score), y=(demand)
+x = df_data$pollScore
+y = df_data$demand
+df_data$pollService3 = (exp(2*x*y - y*y)-1)/(exp(1)-1)
 
 # Save data 
 write.csv(df_data, file=paste0(dataFolder, "metrics_v2021-02-25.csv"), row.names=FALSE)
