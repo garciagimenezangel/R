@@ -1,9 +1,3 @@
-
-# THIS FILE MIGHT BE OUTDATED: 
-# CHECK "gitrepoR/Validation/LonsdorfValidation.R" for the newest version of the script devoted to the validation of the Lonsdorf model
-
-
-
 #ESYRCE
 #Validar londsdorf global y por crop
 library(lme4)
@@ -39,7 +33,8 @@ fieldCols = c("study_id", "site_id", "sampling_year", "crop", "country", "abunda
               "visit_other_flies"       ,"visit_beetles"      ,"visit_lepidoptera"     ,
               "visit_nonbee_hymenoptera","visit_others")
 modelCols = c("Lonsdorf.INVEST.CORINE_man0_mod0"  , "Lonsdorf.INVEST.CORINE_man0_mod1",    "Lonsdorf.INVEST.CORINE_man1_mod0",    "Lonsdorf.INVEST.CORINE_man1_mod1",
-              "Lonsdorf.ZonasNaturales_man0_mod0" , "Lonsdorf.ZonasNaturales_man0_mod1",   "Lonsdorf.ZonasNaturales_man1_mod0",  "Lonsdorf.ZonasNaturales_man1_mod1")
+              "Lonsdorf.ZonasNaturales_man0_mod0" , "Lonsdorf.ZonasNaturales_man0_mod1",   "Lonsdorf.ZonasNaturales_man1_mod0",  "Lonsdorf.ZonasNaturales_man1_mod1",
+              "Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0")
 df_data   = df_data %>% dplyr::select(c(fieldCols,modelCols)) # select columns
 
 #############################
@@ -48,14 +43,15 @@ df_data   = df_data %>% dplyr::select(c(fieldCols,modelCols)) # select columns
 # SPAIN
 df_spain = subset(df_data, country == "Spain")
 dat = df_spain
-dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0))
+dat = subset(dat, !is.na(Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0))
 
 # EUROPE
 dat = df_data
-dat = subset(dat, !is.na(Lonsdorf.ZonasNaturales_man0_mod0))
+dat = subset(dat, !is.na(Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0))
 
 # Standardize units somehow
 sumCols                = c("ab_bombus","ab_wildbees","ab_syrphids","ab_humbleflies", "ab_nonbee_hymenoptera", "ab_lepidoptera") 
+sumCols                = c("ab_bombus","ab_wildbees","ab_syrphids") 
 dat                    = subset(dat, !is.na(ab_wildbees)) # at least abundance of wildbees must be measured 
 dat                    = subset(dat, !is.na(total_sampled_time)) # total sampled time needed 
 dat[,sumCols]          = dat[,sumCols] %>% mutate_if(is.numeric, ~replace(., is.na(.), 0))
@@ -90,7 +86,7 @@ hist(dat$ab_wild_comparable)
 ###############################
 # Lonsdorf.ZonasNaturales_man0_mod0 mod0 or Lonsdorf.ZonasNaturales_man0_mod1 mod1
 #model <- glmer.nb(ab_wild_comparable ~ Lonsdorf.ZonasNaturales_man0_mod0 + (1|study_id), data = dat, na.action = na.omit)
-m1 <- glmmTMB(ab_wild_comparable ~ Lonsdorf.ZonasNaturales_man0_mod0 + (1|study_id), family = Gamma(link='log'), dat[dat$ab_wild_comparable>0,])
+m1 <- glmmTMB(ab_wild_comparable ~ Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0 + (1|study_id), family = Gamma(link='log'), dat[dat$ab_wild_comparable>0,])
 r21 = performance::r2(m1)
 
 # Lonsdorf.INVEST.CORINE_man0_mod0 or Lonsdorf.INVEST.CORINE_man0_mod1
@@ -105,7 +101,7 @@ r22 = performance::r2(m2)
 ##############################
 # PLOTS
 ##############################
-term1 = "Lonsdorf.ZonasNaturales_man0_mod0" # write predictor used here
+term1 = "Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0" # write predictor used here
 # Using visreg
 library(visreg)
 p1 <- visreg(m1, term1, gg = TRUE, plot = FALSE)
@@ -116,9 +112,9 @@ Crop = stringr::str_replace(Crop, "Helianthus annuus", "sunflower")
 Crop = stringr::str_replace(Crop, "Malus domestica", "apple")
 Crop = stringr::str_replace(Crop, "Prunus dulcis", "almond")
 f1 <- ggplot()+
-    geom_point(data = p1$res, aes(Lonsdorf.ZonasNaturales_man0_mod0, visregRes, colour=Crop))+
-    geom_line(data = p1$fit, aes(Lonsdorf.ZonasNaturales_man0_mod0, visregFit))+
-    geom_ribbon(data = p1$fit, aes(x = Lonsdorf.ZonasNaturales_man0_mod0, ymin = visregLwr, ymax = visregUpr), 
+    geom_point(data = p1$res, aes(Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0, visregRes, colour=Crop))+
+    geom_line(data = p1$fit, aes(Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0, visregFit))+
+    geom_ribbon(data = p1$fit, aes(x = Lonsdorf.Delphi_CGLS_lcCont1_man0_mod0_div0_ins0, ymin = visregLwr, ymax = visregUpr), 
                 fill = "lightgrey", alpha = 0.5)+
     xlab("Pollinators score (Spain)") +
     ylab("f(Observed abundance)")+

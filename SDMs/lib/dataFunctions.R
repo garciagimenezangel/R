@@ -21,7 +21,7 @@ getOBServInsectSampling <- function(observDir){
   indInsectSampling = unlist(indInsectSampling)
   fsInsectSampling  = observFiles[indInsectSampling]
   dfInsectSampling  = do.call(rbind, lapply(fsInsectSampling, function(file){ read.csv(file = file, header = TRUE) }))
-  dfInsectSampling  = dfInsectSampling[, names(dfInsectSampling) %in% c("study_id", "site_id", "pollinator","abundance")]
+  dfInsectSampling  = dfInsectSampling[, names(dfInsectSampling) %in% c("study_id", "site_id", "pollinator","abundance", "guild")]
   names(dfInsectSampling)[names(dfInsectSampling) == "abundance"] <- "abundance_species"
   return(dfInsectSampling)
 }
@@ -167,6 +167,7 @@ getHistos <- function(histoDir, removePatterns, coords_digits=4) {
   }
   return(dfHistos)
 }
+
 
 ##########################
 # CORINE-RELATED FEATURES

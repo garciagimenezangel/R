@@ -78,7 +78,9 @@ GetValues_GEEModels <- function() {
       # Drop not useful columns (inherited from the export in GEE)
       model_data = model_data %>% dplyr::select(-contains("latitude"))  # we use round_lat instead of latitude for merging
       model_data = model_data %>% dplyr::select(-contains("longitude")) # we use round_lon instead of longitude for merging
-      model_data = model_data %>% dplyr::select(-c("system.index", ".geo"))
+      if (("system.index" %in% colnames(model_data)) & (".geo" %in% colnames(model_data))){
+        model_data = model_data %>% dplyr::select(-c("system.index", ".geo"))
+      }
       
       # There might be duplicated values in the tables from GEE, because some field points are very near and have the same coordintes. Remove those rows:
       model_data = model_data[!duplicated(model_data),]

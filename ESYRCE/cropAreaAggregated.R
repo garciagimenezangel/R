@@ -9,7 +9,7 @@ source("./functions.R")
 
 # Read datasets
 dataFolder   = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFile     = paste0(dataFolder, "geo_metrics_climate_20-12-18.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
 df_data      = read.csv(dataFile, header=T)
 df_data$region   = abbreviate(df_data$region)
 df_data$province = abbreviate(df_data$province)
