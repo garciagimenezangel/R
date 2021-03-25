@@ -9,7 +9,8 @@ library(rlist)
 rm(list = ls())
 
 # Working directory
-work_dir = "C:/Users/angel/git/R/Extract modeldata/"
+work_dir = "C:/Users/angel.gimenez/git/R/Extract modeldata/"
+#work_dir = "C:/Users/angel/git/R/Extract modeldata/"
 setwd(work_dir);
 
 # Configuration file
