@@ -1,6 +1,17 @@
 library(dplyr)
 library(gstat) 
+library(sf)
+library(ggplot2)
+library(scales)
+library(raster)
+library(rasterVis)
+library(wesanderson)
+library(cowplot)
+library(rlist)
+rm(list=ls())
 ###########
+
+# setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
 setwd("C:/Users/angel/git/R/ESYRCE/")
 
 # Organize categories
@@ -9,164 +20,86 @@ source("./categories.R")
 # Functions
 source("./functions.R")
 
-dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/Analysis/2020-12/"
-GEEFolder  = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/GEE/ZonasNaturales/"
+# dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
+dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
+figuresFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "geo_metrics_20-12-18.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
 df_data      = read.csv(dataFile, header=T)
-modelFile    = paste0(dataFolder, "geo_model_20-12-18.csv")
-df_pollModel = read.csv(modelFile, header=T)
 
-###############################
-# Calculate slopes by category
-###############################
-###############
-# Proportion of seminatural area
-columns = paste0("prop_",seminatural)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_slopeSeminatural = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_slopeSeminatural = df_slopeSeminatural[!is.na(df_slopeSeminatural$slope),]
-df_slopeSeminatural$region = abbreviate(df_slopeSeminatural$region)
-df_slopeSeminatural$province = abbreviate(df_slopeSeminatural$province)
-# Histogram
-ggplot(df_slopeSeminatural, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_slopeSeminatural, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_slopeSeminatural$slope ~ df_slopeSeminatural$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_slopeSeminatural$slope ~ df_slopeSeminatural$province, range=100, ylim = c(-0.01, 0.01))
-aggregate(df_slopeSeminatural[,"slope"], by=list(df_slopeSeminatural$region), FUN=mean1000)
-aggregate(df_slopeSeminatural[,"slope"], by=list(df_slopeSeminatural$region), FUN=median1000)
+############################
+# Slopes 
+############################
+getSlope = function(columns, outcolname, isOneColumn = FALSE, minThresh=-1e100, maxThresh=1e100, columnThresh="") {
+  baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
+  df_metric          = df_data[,c(baseCols,columns)]
+  if(isOneColumn) {
+    df_metric$metric = df_metric[,columns]
+  } else {
+    df_metric$metric = rowSums(df_metric[,columns])
+  }
+  if (columnThresh == "") { # use metric to set thresholds
+    notValid = (df_metric$metric <= minThresh) | (df_metric$metric >= maxThresh)
+    df_metric$metric[notValid] = NA
+  } else { # use columnThresh to set thresholds
+    notValid = (df_metric$columnThresh <= minThresh) | (df_metric$columnThresh >= maxThresh)
+    df_metric$metric[notValid] = NA
+  }  
+  df_slope = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
+  names(df_slope)[names(df_slope) == 'slope'] <- outcolname
+  return(df_slope)
+}
 
-###############
-# Proportion of cereal grain
-columns = paste0("prop_",cerealGrain)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_slopeCereal = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_slopeCereal = df_slopeCereal[!is.na(df_slopeCereal$slope),]
-df_slopeCereal$region = abbreviate(df_slopeCereal$region)
-df_slopeCereal$province = abbreviate(df_slopeCereal$province)
-# Histogram
-ggplot(df_slopeCereal, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_slopeCereal, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_slopeCereal$slope ~ df_slopeCereal$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_slopeCereal$slope ~ df_slopeCereal$province, range=100, ylim = c(-0.01, 0.01))
+# LANDCOVER
+# Cropland
+cropland = getSlope(paste0("prop_",agriLand), "slope_cropland")
+# seminatural
+seminatural = getSlope(paste0("prop_",seminatural), "slope_seminatural")
+# notAgri (artificial)
+notAgri = getSlope("prop_notAgri", "slope_artificial", isOneColumn = TRUE)
+# edgeDensityDiss 
+edgeDensityDiss = getSlope("edgeDensityDiss", "slope_edgeDensityDiss", isOneColumn = TRUE)
 
-###############
-# Proportion of fruit trees (citric and no citric)
-columns = paste0("prop_",fruitTree)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_fruitTree = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_fruitTree = df_fruitTree[!is.na(df_fruitTree$slope),]
-df_fruitTree$region = abbreviate(df_fruitTree$region)
-df_fruitTree$province = abbreviate(df_fruitTree$province)
-# Histogram
-ggplot(df_fruitTree, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_fruitTree, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_fruitTree$slope ~ df_fruitTree$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_fruitTree$slope ~ df_fruitTree$province, range=100, ylim = c(-0.01, 0.01))
+# CROPLAND metrics
+# FieldSize(sin disolver)
+avgFieldSize = getSlope("avgFieldSize","slope_avgFieldSize", isOneColumn=TRUE, minThresh=0)
+# Diversity
+diversity = getSlope("cropsPerCropHa", "slope_cropsPerCropHa", isOneColumn = TRUE, minThresh=0)
+# Intensification
+intensification = getSlope("intensification", "slope_intensification", isOneColumn = TRUE)
 
-###############
-# Proportion of other (mainly abandoned/fallow)
-columns = paste0("prop_",other)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_other = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_other = df_other[!is.na(df_other$slope),]
-df_other$region = abbreviate(df_other$region)
-df_other$province = abbreviate(df_other$province)
-# Histogram
-ggplot(df_other, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_other, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_other$slope ~ df_other$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_other$slope ~ df_other$province, range=100, ylim = c(-0.01, 0.01))
-
-###############
-# Proportion of notAgri (artificial?)
-columns = paste0("prop_",notAgri)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_notAgri = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_notAgri = df_other[!is.na(df_notAgri$slope),]
-df_notAgri$region = abbreviate(df_notAgri$region)
-df_notAgri$province = abbreviate(df_notAgri$province)
-# Histogram
-ggplot(df_notAgri, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_notAgri, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_notAgri$slope ~ df_notAgri$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_notAgri$slope ~ df_notAgri$province, range=100, ylim = c(-0.01, 0.01))
-
-###############
-# Proportion of agricultural land
-columns = paste0("prop_",agriLand)
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_agriLand = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_agriLand = df_agriLand[!is.na(df_agriLand$slope),]
-df_agriLand$region = abbreviate(df_agriLand$region)
-df_agriLand$province = abbreviate(df_agriLand$province)
-# Histogram
-ggplot(df_agriLand, aes(x=slope)) + geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) + coord_cartesian(xlim=c(-0.2,0.2)) + facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_agriLand, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_agriLand$slope ~ df_agriLand$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_agriLand$slope ~ df_agriLand$province, range=100, ylim = c(-0.01, 0.01))
-
-##############
+# POLLINATORS metrics
+# Threshold cropsPerCropHa>0 equals to the condition set in "mergeNewMetrics.R": cropArea > cropAreaThreshold (initially 0.5 hectares)
 # Demand
-columns = demand
-useCols = c("D1_HUS", "D2_NUM", "province", "region", "YEA","longitude", "latitude", columns)
-df_slopeDemand = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_slopeDemand = df_slopeDemand[!is.na(df_slopeDemand$slope),]
-df_slopeDemand$region   = abbreviate(df_slopeDemand$region)
-df_slopeDemand$province = abbreviate(df_slopeDemand$province)
-# Histogram
-ggplot(df_slopeDemand, aes(x=slope)) +
-  geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) +
-  coord_cartesian(xlim=c(-0.2,0.2)) +
-  facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_slopeDemand, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_slopeDemand$slope ~ df_slopeDemand$region, range=100, ylim = c(-0.005, 0.005))
-boxplot(df_slopeDemand$slope ~ df_slopeDemand$province, range=100, ylim = c(-0.005, 0.005))
+demand = getSlope("demand","slope_demand", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+# Poll score
+pollScore = getSlope("pollScore","slope_pollScore", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+# Poll service
+pollService = getSlope("pollService2","slope_pollService2", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+# pollinators' independent/dependent crops
+croplandDependent = getSlope(paste0("prop_",pollDependent),"slope_pollDependent")
+croplandNotDepent = getSlope(paste0("prop_",pollNotDepent),"slope_pollNotDepent")
 
-##############
-# Yield 
-columns = paste0("yield_",agriLand)
-indNotAllNA = rowSums(!is.na(df_data[,columns])) > 0
-df_data[indNotAllNA,columns]  = df_data[indNotAllNA,columns] %>% mutate_all(~replace(., is.na(.), 0)) # The NA values from crops that are not present in the segments must be replace by 0's
-df_slopeYield = df_data[,useCols] %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_slopeYield = df_slopeDemand[!is.na(df_slopeYield$slope),]
-df_slopeYield$region   = abbreviate(df_slopeYield$region)
-df_slopeYield$province = abbreviate(df_slopeYield$province)
-# Histogram
-ggplot(df_slopeYield, aes(x=slope)) +
-  geom_histogram(breaks=c(-0.2,-0.1,-0.01,-0.001,0.001,0.01,0.1,0.2)) +
-  coord_cartesian(xlim=c(-0.2,0.2)) +
-  facet_wrap(~region, nrow=2)
-# Values by region
-ggplot(df_slopeYield, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-boxplot(df_slopeYield$slope ~ df_slopeYield$region, range=100, ylim = c(-0.01, 0.01))
-boxplot(df_slopeYield$slope ~ df_slopeYield$province, range=100, ylim = c(-0.01, 0.01))
+# YIELD
+i=1
+minYield=50 #minimum 50kg per ha
+listSlopeYield = list()
+for (crop in agriLand) {
+  yieldCrop = paste0("yield_",crop)
+  listSlopeYield[[i]] = getSlope(yieldCrop, paste0("slope_",yieldCrop), isOneColumn=TRUE, minThresh=minYield)
+  i=i+1
+}
+yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
+# write.csv(yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
+yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
-##############
-# Pollination potential
-columns = c("ZonasNaturales_man0_mod0")
-df_slopesPoll = df_pollModel %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-df_slopesPoll = df_slopesPoll[!is.na(df_slopesPoll$slope),]
-df_slopesPoll$region   = abbreviate(df_slopesPoll$region)
-df_slopesPoll$province = abbreviate(df_slopesPoll$province)
-# Values by region
-boxplot(df_slopesPoll$slope ~ df_slopesPoll$region, range=100, ylim = c(-0.01, 0.01))
-ggplot(df_slopesPoll, aes(region, slope)) + geom_point(aes(colour = factor(region))) + geom_hline(yintercept=0, linetype="dashed", color = "black")
-
-
-# Field size
-columns = c("avgFieldSizeDiss")
-df_slopeFieldSize = df_data %>% group_by(D1_HUS, D2_NUM, province, region) %>%  do(data.frame(calculateSlope(., columns)))
-
-#...
+# MERGE EVERYTHING
+listMetrics = list(cropland, seminatural, notAgri, edgeDensityDiss, avgFieldSize, diversity, intensification, demand, pollScore, pollService, croplandDependent, croplandNotDepent)
+metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
+metricsAll  = merge(yieldCrops, metrics, by = c("D1_HUS","D2_NUM"))
+metricsAll  = Filter(function(x)!all(is.na(x)), metricsAll) # remove columns with all NA's
+write.csv(metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
 
 ############################
 # Annual evolution 
@@ -180,4 +113,5 @@ pl_dem<-ggplot(df_data, aes(YEA, demand)) +
 pl_poll<-ggplot(df_pollModel, aes(YEA, ZonasNaturales_man0_mod0)) +
   geom_point(aes(colour = factor(region))) +
   geom_smooth(method="lm", se=TRUE, aes(color=region))
+
 

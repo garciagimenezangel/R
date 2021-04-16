@@ -40,6 +40,24 @@ polys$province = abbreviate(polys$NAME_2) # abbreviate names
 df_data$region = abbreviate(df_data$region) # abbreviate names
 df_data$province = abbreviate(df_data$province) # abbreviate names
 
+getSlope = function(columns, isOneColumn = FALSE, minThresh=-1e100, maxThresh=1e100, columnThresh="") {
+  baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
+  df_metric          = df_data[,c(baseCols,columns)]
+  if(isOneColumn) {
+    df_metric$metric = df_metric[,columns]
+  } else {
+    df_metric$metric = rowSums(df_metric[,columns])
+  }
+  if (columnThresh == "") { # use metric to set thresholds
+    df_metric = df_metric[df_metric$metric > minThresh,]
+    df_metric = df_metric[df_metric$metric < maxThresh,]
+  } else { # use columnThresh to set thresholds
+    df_metric = df_metric[df_data[,columnThresh] > minThresh,]
+    df_metric = df_metric[df_data[,columnThresh] < maxThresh,]
+  }  
+  return(df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric"))))
+}
+
 # General function to save the figures
 getFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercentage = FALSE, 
                       minThresh=-1e100, maxThresh=1e100, columnThresh="", squish=FALSE, 

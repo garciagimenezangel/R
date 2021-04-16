@@ -18,7 +18,7 @@ calculateSlope <- function(data, columns) {
   xaxis = xaxis[valid]
   yaxis = yaxis[valid]
   slope = NA
-  if (length(xaxis) > 2) { # calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
+  if (length(xaxis) > 1) { # calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
     lmMod <- lm(yaxis ~ xaxis, data=data.frame(xaxis = xaxis, yaxis=yaxis))
     summ  = summary(lmMod)
     coeff = summ$coefficients
@@ -46,7 +46,7 @@ calculateSlopeOnecolumn <- function(data, columnName) {
     coeff = summ$coefficients
     slope = coeff[2]
   }
-  else { slope = 0 }
+  else if (length(xaxis) == 1) { slope = 0 }
   return(tibble::tibble(slope = slope))
 }
 
