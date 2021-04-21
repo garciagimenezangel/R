@@ -1,12 +1,8 @@
 library(dplyr)
 library(gstat) 
 library(sf)
-library(ggplot2)
 library(scales)
 library(raster)
-library(rasterVis)
-library(wesanderson)
-library(cowplot)
 library(rlist)
 rm(list=ls())
 ###########
@@ -22,11 +18,37 @@ source("./functions.R")
 
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-figuresFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
 
 # Read datasets
 dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
 df_data      = read.csv(dataFile, header=T)
+
+############################
+# Fill "missing" years 
+############################
+# Some segments might not visited because no changes happened there (our assumption about ESYRCE methodology, no confirmation about it).
+# In order for the slopes to not being artificially high, we fill in the years with no visits, as long as the segment was visited in a previous year
+
+# INPUT: data from a group by operation. 
+# OUTPUT: data with added years replicating last visit
+####################################
+fillInNotVisitedYears = function(data, maxYear) {
+  outData = data
+  minYear = min(data$YEA)
+  if( (minYear+1) <= maxYear) {
+    for (currYear in seq(minYear+1, maxYear)) {
+      refRow   = outData[outData$YEA == (currYear-1), ]
+      if ( !(currYear %in% data$YEA) ) {
+        refRow$YEA = currYear
+        outData = rbind(outData, refRow)
+        outData = outData[order(outData$YEA),]
+      }
+    }
+  }
+  return (outData)
+}
+maxYear = 2019
+df_filledData = df_data %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(fillInNotVisitedYears(., maxYear)))
 
 ############################
 # Slopes 
