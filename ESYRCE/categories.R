@@ -246,5 +246,8 @@ pollUnknown   = unknown
 #                                      name %in% irrigated            |
 #                                      name %in% dry) {} else {print(name)} }
 
-
+# seminatural categories in the linear-mixed models
+seminatural_forest = c("conifers", "broadleafFast", "broadleafSlow", "poplar", "mixedForest")
+seminatural_meadow = c("naturalMeadow", "highMountainMeadow")
+seminatural_shrub  = c("pastureGrassland", "pastureShrub", "shrub")   
 

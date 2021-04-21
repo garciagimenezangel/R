@@ -31,7 +31,16 @@ df_data      = read.csv(dataFile, header=T)
 ############################
 # Slopes 
 ############################
-getSlope = function(columns, outcolname, isOneColumn = FALSE, minThresh=-1e100, maxThresh=1e100, columnThresh="") {
+# Note: slope is scaled using the mean value over the years, so we save these mean values too
+getSlopeAndMean = function(columns, 
+                           outcolname, 
+                           isOneColumn = FALSE, 
+                           minThresh=-1e100, 
+                           maxThresh=1e100, 
+                           columnThresh="", 
+                           ignoreSegmAllZeros = T,
+                           ignoreSegmAnyZero  = F)
+{
   baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
   df_metric          = df_data[,c(baseCols,columns)]
   if(isOneColumn) {
@@ -40,46 +49,66 @@ getSlope = function(columns, outcolname, isOneColumn = FALSE, minThresh=-1e100, 
     df_metric$metric = rowSums(df_metric[,columns])
   }
   if (columnThresh == "") { # use metric to set thresholds
-    notValid = (df_metric$metric <= minThresh) | (df_metric$metric >= maxThresh)
+    notValid = (df_metric$metric < minThresh) | (df_metric$metric > maxThresh)
     df_metric$metric[notValid] = NA
   } else { # use columnThresh to set thresholds
-    notValid = (df_metric$columnThresh <= minThresh) | (df_metric$columnThresh >= maxThresh)
+    notValid = (df_metric$columnThresh < minThresh) | (df_metric$columnThresh > maxThresh)
     df_metric$metric[notValid] = NA
   }  
-  df_slope = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-  names(df_slope)[names(df_slope) == 'slope'] <- outcolname
-  return(df_slope)
+  df_slope    = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
+  df_mean     = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
+  df_slopeMean= merge(df_slope,df_mean,by=c("D1_HUS", "D2_NUM"))
+
+  if (ignoreSegmAllZeros) { # if all zeros over the years, set values to NA
+    allZeros = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(areAllZeros(., "metric")))
+    auxDf    = merge(df_slopeMean, allZeros)
+    df_slopeMean$slope[auxDf$allZeros] = NA
+    df_slopeMean$mean[auxDf$allZeros]  = NA
+  }
+  else if (ignoreSegmAnyZero) {
+    anyZero = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(isAnyZero(., "metric")))
+    auxDf   = merge(df_slopeMean, anyZero)
+    df_slopeMean$slope[auxDf$anyZero] = NA
+    df_slopeMean$mean[auxDf$anyZero]  = NA
+  }
+  names(df_slopeMean)[names(df_slopeMean) == 'slope'] <- paste0("slope_",outcolname)
+  names(df_slopeMean)[names(df_slopeMean) == 'mean']  <- paste0("mean_",outcolname)
+  return(df_slopeMean)
 }
 
 # LANDCOVER
 # Cropland
-cropland = getSlope(paste0("prop_",agriLand), "slope_cropland")
+df_cropland = getSlopeAndMean(paste0("prop_",agriLand), "cropland")
 # seminatural
-seminatural = getSlope(paste0("prop_",seminatural), "slope_seminatural")
+df_seminatural = getSlopeAndMean(paste0("prop_",seminatural), "seminatural")
 # notAgri (artificial)
-notAgri = getSlope("prop_notAgri", "slope_artificial", isOneColumn = TRUE)
+df_notAgri = getSlopeAndMean("prop_notAgri", "artificial", isOneColumn = TRUE)
 # edgeDensityDiss 
-edgeDensityDiss = getSlope("edgeDensityDiss", "slope_edgeDensityDiss", isOneColumn = TRUE)
+df_edgeDensityDiss = getSlopeAndMean("edgeDensityDiss", "edgeDensityDiss", isOneColumn = TRUE, ignoreSegmAllZeros = F)
+# seminatural types
+df_seminatForest = getSlopeAndMean(paste0("prop_",seminatural_forest), "seminatForest")
+df_seminatMeadow = getSlopeAndMean(paste0("prop_",seminatural_meadow), "seminatMeadow")
+df_seminatShrub  = getSlopeAndMean(paste0("prop_",seminatural_shrub),  "seminatShrub")
 
 # CROPLAND metrics
 # FieldSize(sin disolver)
-avgFieldSize = getSlope("avgFieldSize","slope_avgFieldSize", isOneColumn=TRUE, minThresh=0)
+df_avgFieldSize = getSlopeAndMean("avgFieldSize","avgFieldSize", isOneColumn=TRUE, minThresh=0)
 # Diversity
-diversity = getSlope("cropsPerCropHa", "slope_cropsPerCropHa", isOneColumn = TRUE, minThresh=0)
+df_diversity = getSlopeAndMean("cropsPerCropHa", "cropsPerCropHa", isOneColumn = TRUE, minThresh=0)
 # Intensification
-intensification = getSlope("intensification", "slope_intensification", isOneColumn = TRUE)
+df_intensification = getSlopeAndMean("intensification", "intensification", isOneColumn = TRUE)
 
 # POLLINATORS metrics
 # Threshold cropsPerCropHa>0 equals to the condition set in "mergeNewMetrics.R": cropArea > cropAreaThreshold (initially 0.5 hectares)
 # Demand
-demand = getSlope("demand","slope_demand", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+df_demand = getSlopeAndMean("demand","demand", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
 # Poll score
-pollScore = getSlope("pollScore","slope_pollScore", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+df_pollScore = getSlopeAndMean("pollScore","pollScore", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
 # Poll service
-pollService = getSlope("pollService2","slope_pollService2", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
+df_pollService = getSlopeAndMean("pollService2","pollService2", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
 # pollinators' independent/dependent crops
-croplandDependent = getSlope(paste0("prop_",pollDependent),"slope_pollDependent")
-croplandNotDepent = getSlope(paste0("prop_",pollNotDepent),"slope_pollNotDepent")
+df_croplandDependent = getSlopeAndMean(paste0("prop_",pollDependent),"pollDependent")
+df_croplandNotDepent = getSlopeAndMean(paste0("prop_",pollNotDepent),"pollNotDepent")
 
 # YIELD
 i=1
@@ -87,19 +116,26 @@ minYield=50 #minimum 50kg per ha
 listSlopeYield = list()
 for (crop in agriLand) {
   yieldCrop = paste0("yield_",crop)
-  listSlopeYield[[i]] = getSlope(yieldCrop, paste0("slope_",yieldCrop), isOneColumn=TRUE, minThresh=minYield)
+  listSlopeYield[[i]] = getSlopeAndMean(yieldCrop, paste0("",yieldCrop), isOneColumn=TRUE, minThresh=minYield)
   i=i+1
 }
-yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
-# write.csv(yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
-yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
+df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
+write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
+#df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
-listMetrics = list(cropland, seminatural, notAgri, edgeDensityDiss, avgFieldSize, diversity, intensification, demand, pollScore, pollService, croplandDependent, croplandNotDepent)
-metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
-metricsAll  = merge(yieldCrops, metrics, by = c("D1_HUS","D2_NUM"))
-metricsAll  = Filter(function(x)!all(is.na(x)), metricsAll) # remove columns with all NA's
-write.csv(metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
+listMetrics = list(df_cropland, df_seminatural, df_seminatForest, df_seminatMeadow, df_seminatShrub, df_notAgri, df_edgeDensityDiss, df_avgFieldSize, df_diversity, df_intensification, df_demand, df_pollScore, df_pollService, df_croplandDependent, df_croplandNotDepent)
+df_metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM","province"))
+df_metricsAll  = merge(df_yieldCrops, df_metrics, by = c("D1_HUS","D2_NUM","province"))
+df_metricsAll  = Filter(function(x)!all(is.na(x)), metricsAll) # remove columns with all NA's
+
+# Add province 
+df_province = df_data %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+df_metricsAll = merge(df_metricsAll, df_province, by=c("D1_HUS", "D2_NUM")) # add province
+
+# SAVE
+write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
+df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
 ############################
 # Annual evolution 

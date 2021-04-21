@@ -50,6 +50,27 @@ calculateSlopeOnecolumn <- function(data, columnName) {
   return(tibble::tibble(slope = slope))
 }
 
+####################################
+# INPUT: 
+# - data from a group by operation. 
+# - column name
+# OUTPUT: T if all zeros, F otherwise
+####################################
+areAllZeros <- function(data, columnName) {
+  allZeros = all(data[,columnName] == 0)
+  return(tibble::tibble(allZeros = allZeros))
+}
+
+####################################
+# INPUT: 
+# - data from a group by operation. 
+# - column name
+# OUTPUT: T if any zeros, F otherwise
+####################################
+isAnyZero <- function(data, columnName) {
+  anyZero = any(data[,columnName] == 0)
+  return(tibble::tibble(anyZero = anyZero))
+}
 
 ####################################
 # INPUT: dataframe from ESYRCE dataset, with coordinates of the segments encoded in the fields "D1_HUS" and "D2_NUM", and size of the segment 

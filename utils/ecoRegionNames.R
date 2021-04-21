@@ -13,5 +13,5 @@ getBiomeFromID = function(biomeNum) {
 }
 
 # Examples:
-getBiomeFromID(3)
+getBiomeFromID(5)
 getEcoNameFromID(118)
