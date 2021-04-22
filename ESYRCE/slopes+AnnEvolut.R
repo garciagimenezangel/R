@@ -49,11 +49,13 @@ fillInNotVisitedYears = function(data, maxYear) {
 }
 maxYear = 2019
 df_filledData = df_data %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(fillInNotVisitedYears(., maxYear)))
+#write.csv(df_filledData, file=paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv"),row.names=FALSE)
+df_filledData = read.csv(file=paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv"),header=T)
 
 ############################
 # Slopes 
 ############################
-# Note: slope is scaled using the mean value over the years, so we save these mean values too
+# Note: we might want to scale the values of slope later, using the mean value over the years, so we save these mean values too
 getSlopeAndMean = function(columns, 
                            outcolname, 
                            isOneColumn = FALSE, 
@@ -64,17 +66,17 @@ getSlopeAndMean = function(columns,
                            ignoreSegmAnyZero  = F)
 {
   baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
-  df_metric          = df_data[,c(baseCols,columns)]
+  df_metric          = df_filledData[,c(baseCols,columns)]
   if(isOneColumn) {
     df_metric$metric = df_metric[,columns]
   } else {
     df_metric$metric = rowSums(df_metric[,columns])
   }
   if (columnThresh == "") { # use metric to set thresholds
-    notValid = (df_metric$metric < minThresh) | (df_metric$metric > maxThresh)
+    notValid = (df_metric$metric <= minThresh) | (df_metric$metric >= maxThresh)
     df_metric$metric[notValid] = NA
   } else { # use columnThresh to set thresholds
-    notValid = (df_metric$columnThresh < minThresh) | (df_metric$columnThresh > maxThresh)
+    notValid = (df_filledData[,columnThresh] <= minThresh) | (df_filledData[,columnThresh] >= maxThresh)
     df_metric$metric[notValid] = NA
   }  
   df_slope    = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
@@ -142,20 +144,20 @@ for (crop in agriLand) {
   i=i+1
 }
 df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
-write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
-#df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
+# write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
+df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
 listMetrics = list(df_cropland, df_seminatural, df_seminatForest, df_seminatMeadow, df_seminatShrub, df_notAgri, df_edgeDensityDiss, df_avgFieldSize, df_diversity, df_intensification, df_demand, df_pollScore, df_pollService, df_croplandDependent, df_croplandNotDepent)
-df_metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM","province"))
-df_metricsAll  = merge(df_yieldCrops, df_metrics, by = c("D1_HUS","D2_NUM","province"))
-df_metricsAll  = Filter(function(x)!all(is.na(x)), metricsAll) # remove columns with all NA's
+df_metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
+df_metricsAll  = merge(df_yieldCrops, df_metrics, by = c("D1_HUS","D2_NUM"))
+df_metricsAll  = Filter(function(x)!all(is.na(x)), df_metricsAll) # remove columns with all NA's
 
 # Add province 
-df_province = df_data %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
+df_province = df_filledData %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
 df_metricsAll = merge(df_metricsAll, df_province, by=c("D1_HUS", "D2_NUM")) # add province
 
-# SAVE
+# SAVE/READ
 write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
@@ -163,7 +165,7 @@ df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetri
 # Annual evolution 
 ############################
 # Demand
-pl_dem<-ggplot(df_data, aes(YEA, demand)) +
+pl_dem<-ggplot(df_filledData, aes(YEA, demand)) +
   geom_point(aes(colour = factor(region))) +
   geom_smooth(method="lm", se=TRUE, aes(color=region))
 

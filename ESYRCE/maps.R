@@ -13,9 +13,6 @@ rm(list=ls())
 # setwd("C:/Users/angel.gimenez/git/R/ESYRCE/")
 setwd("C:/Users/angel/git/R/ESYRCE/")
 
-# Organize categories
-source("./categories.R")
-
 # Functions
 source("./functions.R")
 
@@ -23,8 +20,8 @@ source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 figuresFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
 
-# Read datasets
-dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
+# Read datasets (slopes)
+dataFile     = paste0(dataFolder, "intermediateProducts/slopeMetrics.csv")
 df_data      = read.csv(dataFile, header=T)
 
 # Regions
@@ -37,81 +34,42 @@ box = c(xmin=-9.271338, xmax=4.308773, ymin=36.04188, ymax=43.76652)
 polys = st_crop(polys, st_bbox(box)) 
 polys$region = abbreviate(polys$NAME_1) # abbreviate names
 polys$province = abbreviate(polys$NAME_2) # abbreviate names
-df_data$region = abbreviate(df_data$region) # abbreviate names
-df_data$province = abbreviate(df_data$province) # abbreviate names
-
-getSlope = function(columns, isOneColumn = FALSE, minThresh=-1e100, maxThresh=1e100, columnThresh="") {
-  baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
-  df_metric          = df_data[,c(baseCols,columns)]
-  if(isOneColumn) {
-    df_metric$metric = df_metric[,columns]
-  } else {
-    df_metric$metric = rowSums(df_metric[,columns])
-  }
-  if (columnThresh == "") { # use metric to set thresholds
-    df_metric = df_metric[df_metric$metric > minThresh,]
-    df_metric = df_metric[df_metric$metric < maxThresh,]
-  } else { # use columnThresh to set thresholds
-    df_metric = df_metric[df_data[,columnThresh] > minThresh,]
-    df_metric = df_metric[df_data[,columnThresh] < maxThresh,]
-  }  
-  return(df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric"))))
-}
 
 # General function to save the figures
-getFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercentage = FALSE, 
-                      minThresh=-1e100, maxThresh=1e100, columnThresh="", squish=FALSE, 
-                      slopeMin=-5, slopeMax=5) {
-  pal <- wes_palette("Zissou1", 100, type = "continuous")
-  baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
-  df_metric          = df_data[,c(baseCols,columns)]
-  if(isOneColumn) {
-    df_metric$metric = df_metric[,columns]
-  } else {
-    df_metric$metric = rowSums(df_metric[,columns])
-  }
-  if (columnThresh == "") { # use metric to set thresholds
-    df_metric = df_metric[df_metric$metric > minThresh,]
-    df_metric = df_metric[df_metric$metric < maxThresh,]
-  } else { # use columnThresh to set thresholds
-    df_metric = df_metric[df_data[,columnThresh] > minThresh,]
-    df_metric = df_metric[df_data[,columnThresh] < maxThresh,]
-  }
-  if (showAsPercentage) 
-    df_metric$metric = df_metric$metric*100 # convert to percentage
-  # Mean
-  name = paste0("Average \n", gsub("\\(","\n(",title), "\n(",units,")")
-  name = gsub("- ","\n",name)
-  df_mean          = df_metric %>% group_by(D1_HUS, D2_NUM) %>% summarise(mean=mean(metric, na.rm = TRUE))
-  df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-  df_meanAgg       = merge(df_aggUnit, df_mean)
-  df_meanAggMean   = df_meanAgg %>% group_by(province) %>% summarise(mean=mean(mean, na.rm = TRUE))
-  sf_meanAgg       = merge(polys,df_meanAggMean)
-  midpoint         = mean(df_meanAggMean$mean)
-  fMean = ggplot(sf_meanAgg) +
-    geom_sf(data = sf_meanAgg, aes(fill = mean))+
-    scale_fill_gradientn(colours = pal, name=name)
-  
-  # Slope
+getFigures = function(metric, 
+                      title, 
+                      scaleWithMean=TRUE,
+                      squish=FALSE, 
+                      slopeMin=-5, 
+                      slopeMax=5) 
+{
+  # plot settings
   name = paste0("Average \nSlope \n(%/yr)")
   name = gsub("- ","\n",name)
-  df_slope         = df_metric %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(calculateSlopeOnecolumn(., "metric")))
-  df_aggUnit       = df_data[,c("D1_HUS","D2_NUM","province")] %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=first(province))
-  df_slopeAgg      = merge(df_aggUnit, df_slope)
-  df_slopeAgg$slope = df_slopeAgg$slope *100 / abs(df_meanAgg$mean) # scale by the mean of the metric
-  df_slopeAggMean  = df_slopeAgg %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
-  sf_slopeAgg      = merge(polys,df_slopeAggMean)
+  pal  = wes_palette("Zissou1", 100, type = "continuous")
+  
+  # prepare dataset metrics
+  baseCols         = c("D1_HUS", "D2_NUM", "province")
+  meanCol          = paste0("mean_",metric)
+  slopeCol         = paste0("slope_",metric)
+  df_metric        = df_data[,c(baseCols,slopeCol,meanCol)]
+  names(df_metric) = c(baseCols, "slope", "mean")
+  if(scaleWithMean) df_metric$slope = df_metric$slope * 100 / df_metric$mean
+
+  # aggregate data
+  df_slopeProv = df_metric %>% group_by(province) %>% summarise(slope=mean(slope, na.rm = TRUE))
+  sf_slopeProv = merge(polys,df_slopeProv)
   if (squish) {
-    fSlope = ggplot(sf_slopeAgg) +
-      geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+    fSlope = ggplot(sf_slopeProv) +
+      geom_sf(data = sf_slopeProv, aes(fill = slope))+
       scale_fill_gradientn(colours = pal, name=name, limits = c(slopeMin, slopeMax), oob = scales::squish)
   } 
   else {
-    fSlope = ggplot(sf_slopeAgg) +
-      geom_sf(data = sf_slopeAgg, aes(fill = slope))+
+    fSlope = ggplot(sf_slopeProv) +
+      geom_sf(data = sf_slopeProv, aes(fill = slope))+
       scale_fill_gradientn(colours = pal, name=name, limits = c(slopeMin, slopeMax))
   }
-  return(list(fMean, fSlope))
+  return(fSlope)
 }
 
 # to save figure, run (example):
@@ -122,68 +80,29 @@ getFigures = function(columns, title, units, isOneColumn = FALSE, showAsPercenta
 # pngFile = paste0(figuresFolder,"slope",gsub(" ","",title),".png")
 # figure[[2]]+ggsave(pngFile, width = 7, height = 7, dpi = 150, units = "in", device='png')
 
-#############
-# LANDCOVER
-#############
-# Cropland
-cropland = getFigures(paste0("prop_",agriLand), "Cropland", "%", showAsPercentage = TRUE)
-# seminatural
-seminatural = getFigures(paste0("prop_",seminatural), "Seminatural", "%", showAsPercentage = TRUE)
-# notAgri (artificial)
-notAgri = getFigures("prop_notAgri", "Artificial", "%", isOneColumn = TRUE, showAsPercentage = TRUE)
-# edgeDensityDiss 
-edgeDensityDiss = getFigures("edgeDensityDiss", "Edge Density", "m/ha", isOneColumn = TRUE)
-
-##########################
-# Cropland metrics
-##########################
-# FieldSize(sin disolver)
-avgFieldSize = getFigures("avgFieldSize","Field Size","ha", isOneColumn=TRUE, minThresh=0)
-avgFieldSizeLarge = getFigures("avgFieldSize","Field Size (Large Fields)","ha", isOneColumn=TRUE, minThresh=5) #(area fields>5ha)
-avgFieldSizeSmall = getFigures("avgFieldSize","Field Size (Small Fields)","ha", isOneColumn=TRUE, minThresh=0, maxThresh=5) #(area fields<5ha)
-# Diversity
-diversity = getFigures("cropsPerCropHa", "Diversity", "#crops/- crop ha", isOneColumn = TRUE, minThresh=0)
-# diversity = getFigures("cropsPerHa", "Diversity", "#crops/ha", isOneColumn = TRUE, minThresh=0)
-# Intensification
-intensification = getFigures("intensification", "Intensification", "score", isOneColumn = TRUE)
-
-##########################
-# Pollinators metrics
-##########################
-# Threshold cropsPerCropHa>0 equals to the condition set in "mergeNewMetrics.R": cropArea > cropAreaThreshold (initially 0.5 hectares)
-# Demand
-demand = getFigures("demand","Pollinators - Demand","%", isOneColumn=TRUE, showAsPercentage = TRUE, minThresh=0, columnThresh="cropsPerCropHa")
-# Poll score
-pollScore = getFigures("pollScore","Pollinators - Model","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
-# Poll service
-pollService = getFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa",squish=TRUE)
-# pollinators' independent/dependent crops
-croplandDependent = getFigures(paste0("prop_",pollDependent),"Cropland - Pollinators - Dependent","%", showAsPercentage = TRUE)
-croplandNotDepent = getFigures(paste0("prop_",pollNotDepent),"Cropland - Pollinators - Not Dependent","%", showAsPercentage = TRUE)
-
 #################
 # Combined plots 
 #################
 # MAIN
-diversity    = getFigures("cropsPerCropHa", "Diversity", "#crops/- crop ha", isOneColumn = TRUE, minThresh=0, slopeMin = -3, slopeMax = 3, squish = T)
-avgFieldSize = getFigures("avgFieldSize","Field Size","ha", isOneColumn=TRUE, minThresh=0, slopeMin = -3, slopeMax = 3, squish = T)
-cropland     = getFigures(paste0("prop_",agriLand), "Cropland", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-seminatPlot  = getFigures(paste0("prop_",seminatural), "Seminatural", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-pollService  = getFigures("pollService2","Pollinators - Service","score", isOneColumn=TRUE, columnThresh="cropsPerCropHa", slopeMin = -3, slopeMax = 3, squish = T)
-pollScore    = getFigures("pollScore","Pollinators - Model","score", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa", slopeMin = -3, slopeMax = 3, squish = T)
+diversity    = getFigures("cropsPerCropHa", "Diversity"         , slopeMin = -2.5, slopeMax = 2.5, squish = T)
+avgFieldSize = getFigures("avgFieldSize","Field Size"           , slopeMin = -2.5, slopeMax = 2.5, squish = T)
+cropland     = getFigures("cropland", "Cropland"                , slopeMin = -2.5, slopeMax = 2.5, squish = T)
+seminatPlot  = getFigures("seminatural", "Seminatural"          , slopeMin = -2.5, slopeMax = 2.5, squish = T)
+pollService  = getFigures("pollService2","Pollinators - Service", slopeMin = -2.5, slopeMax = 2.5, squish = T)
+pollScore    = getFigures("pollScore","Pollinators - Model"     , slopeMin = -2.5, slopeMax = 2.5, squish = T)
 
-prowMain <- cowplot::plot_grid( diversity[[2]]    + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                avgFieldSize[[2]] + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                cropland[[2]]     + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                seminatPlot[[2]]  + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                pollScore[[2]]    + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                pollService[[2]]  + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+prowMain <- cowplot::plot_grid( diversity    + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                avgFieldSize + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                cropland     + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                seminatPlot  + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                pollScore    + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                pollService  + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
                     align = 'vh',
                     hjust = -1,
                     labels = c("Diversity", "Field size", "Cropland", "Seminatural", "Poll. Score", "Poll. Service"),
                     nrow = 3)
 legend <- get_legend(
-  diversity[[2]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+  diversity + theme(legend.box.margin = margin(0, 0, 0, 12))
 )
 slopesSummary = plot_grid(prowMain, legend, rel_widths = c(3, .4))
 # Save
@@ -192,25 +111,25 @@ slopesSummary+ggsave(pngFile, width = 8, height = 8, dpi = 250, units = "in", de
 
 # SUPPLEMENTARY MATERIAL
 # supplementary: crop dep sí/no, edge density, forest, meadow y pasture
-croplandDependent = getFigures(paste0("prop_",pollDependent),"Cropland - Pollinators - Dependent","%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-croplandNotDepent = getFigures(paste0("prop_",pollNotDepent),"Cropland - Pollinators - Not Dependent","%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-edgeDensityDiss   = getFigures("edgeDensityDiss", "Edge Density", "m/ha", isOneColumn = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-forestPlot        = getFigures(paste0("prop_",forested), "Forest", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-meadowPlot        = getFigures(paste0("prop_",c("naturalMeadow", "highMountainMeadow")), "Meadow", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
-pasturePlot       = getFigures(paste0("prop_",c("pastureGrassland", "pastureShrub")), "Pasture", "%", showAsPercentage = TRUE, slopeMin = -3, slopeMax = 3, squish = T)
+croplandDependent = getFigures("pollDependent","Cropland - Pollinators - Dependent"    , slopeMin = -5, slopeMax = 5, squish = T)
+croplandNotDepent = getFigures("pollNotDepent","Cropland - Pollinators - Not Dependent", slopeMin = -5, slopeMax = 5, squish = T)
+edgeDensityDiss   = getFigures("edgeDensityDiss", "Edge Density"                       , slopeMin = -5, slopeMax = 5, squish = T)
+forestPlot        = getFigures("seminatForest", "Forest"                               , slopeMin = -5, slopeMax = 5, squish = T)
+meadowPlot        = getFigures("seminatMeadow", "Meadow"                               , slopeMin = -5, slopeMax = 5, squish = T)
+pasturePlot       = getFigures("seminatShrub" , "Pasture and Shrub"                    , slopeMin = -5, slopeMax = 5, squish = T)
 
-prowSupp <- cowplot::plot_grid( croplandDependent[[2]] + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                croplandNotDepent[[2]] + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                edgeDensityDiss[[2]]   + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                forestPlot[[2]]        + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                meadowPlot[[2]]        + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
-                                pasturePlot[[2]]       + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+prowSupp <- cowplot::plot_grid( croplandDependent + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                croplandNotDepent + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                edgeDensityDiss   + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                forestPlot        + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                meadowPlot        + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
+                                pasturePlot       + theme(legend.position="none", axis.text = element_blank(), axis.ticks = element_blank()) + ggtitle(""),
                             align = 'vh',
                             hjust = 0,
-                            labels = c("Cropland Poll. Dep.", "Cropland Poll. Not Dep.", "Edge Density", "Forest", "Meadow", "Pasture"),
+                            labels = c("Cropland Poll. Dep.", "Cropland Poll. Not Dep.", "Edge Density", "Forest", "Meadow", "Pasture and Shrub"),
                             nrow = 3)
 legend <- get_legend(
-  croplandDependent[[2]] + theme(legend.box.margin = margin(0, 0, 0, 12))
+  croplandDependent + theme(legend.box.margin = margin(0, 0, 0, 12))
 )
 slopesSupplementary = plot_grid(prowSupp, legend, rel_widths = c(3, .4))
 # Save
