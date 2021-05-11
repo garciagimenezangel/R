@@ -63,15 +63,28 @@ getSlopeAndMean = function(columns,
                            maxThresh=1e100, 
                            columnThresh="", 
                            ignoreSegmAllZeros = T,
-                           ignoreSegmAnyZero  = F)
+                           ignoreSegmAnyZero  = F,
+                           normSumByProv = F)
 {
   baseCols           = c("D1_HUS", "D2_NUM", "province", "YEA")
   df_metric          = df_filledData[,c(baseCols,columns)]
   if(isOneColumn) {
     df_metric$metric = df_metric[,columns]
+  } else if (normSumByProv) { # normalize column values, by province, and average
+    for (province in unique(df_metric$province)) {
+      for (column in columns) {
+        filter = (df_metric$province == province)
+        colVal = df_metric[filter, column]
+        maxVal = max(colVal, na.rm = T)
+        minVal = min(colVal, na.rm = T)
+        df_metric[filter, column] = (colVal - minVal) / (maxVal-minVal)
+      }
+    }
+    df_metric$metric = rowMeans(df_metric[,columns], na.rm = T)
   } else {
-    df_metric$metric = rowSums(df_metric[,columns])
+    df_metric$metric = rowSums(df_metric[,columns], na.rm = T)
   }
+  
   if (columnThresh == "") { # use metric to set thresholds
     notValid = (df_metric$metric <= minThresh) | (df_metric$metric >= maxThresh)
     df_metric$metric[notValid] = NA
@@ -130,9 +143,12 @@ df_demand = getSlopeAndMean("demand","demand", isOneColumn=TRUE, minThresh=0, co
 df_pollScore = getSlopeAndMean("pollScore","pollScore", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
 # Poll service
 df_pollService = getSlopeAndMean("pollService2","pollService2", isOneColumn=TRUE, minThresh=0, columnThresh="cropsPerCropHa")
-# pollinators' independent/dependent crops
+# pollinators' independent/dependent crops (proportion of the area)
 df_croplandDependent = getSlopeAndMean(paste0("prop_",pollDependent),"pollDependent")
 df_croplandNotDepent = getSlopeAndMean(paste0("prop_",pollNotDepent),"pollNotDepent")
+# yield pollinators' independent/dependent crops
+df_yieldDependent = getSlopeAndMean(paste0("yield_",pollDependent),"yield_pollDependent", normSumByProv = T)
+df_yieldNotDepent = getSlopeAndMean(paste0("yield_",pollNotDepent),"yield_pollNotDepent", normSumByProv = T)
 
 # YIELD
 i=1
@@ -148,7 +164,7 @@ df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
 df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
-listMetrics = list(df_cropland, df_seminatural, df_seminatForest, df_seminatMeadow, df_seminatShrub, df_notAgri, df_edgeDensityDiss, df_avgFieldSize, df_diversity, df_intensification, df_demand, df_pollScore, df_pollService, df_croplandDependent, df_croplandNotDepent)
+listMetrics = list(df_yieldDependent, df_yieldNotDepent, df_cropland, df_seminatural, df_seminatForest, df_seminatMeadow, df_seminatShrub, df_notAgri, df_edgeDensityDiss, df_avgFieldSize, df_diversity, df_intensification, df_demand, df_pollScore, df_pollService, df_croplandDependent, df_croplandNotDepent)
 df_metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
 df_metricsAll  = merge(df_yieldCrops, df_metrics, by = c("D1_HUS","D2_NUM"))
 df_metricsAll  = Filter(function(x)!all(is.na(x)), df_metricsAll) # remove columns with all NA's
