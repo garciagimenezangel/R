@@ -28,14 +28,6 @@ for (crop in paste0("yield_",agriLand)) {
 }
 df_maxyield = df_selected %>% group_by(province) %>% summarise(across(everything(), list(max)))
 
-# Get yield gap as the difference between mean yield and max yield
-getYieldGap = function(dataRow, crop) {
-  province = dataRow["province"]
-  maxYield = df_maxyield[df_maxyield$province == province, paste0("yield_",crop,"_1")]
-  yieldGap = maxYield - dataRow[,paste0("yield_",crop)]
-  return(tibble::tibble(yield_gap = yieldGap))
-}
-
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 for (crop in agriLand) {
   if (paste0("mean_yield_",crop) %in% colnames(df_metricsAll)) {
@@ -47,7 +39,30 @@ for (crop in agriLand) {
     }  
   }
 }
+write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics2.csv"),row.names=FALSE)
 
 
+# Normalize yields (by province)
+for (crop in agriLand) {
+  if (paste0("mean_yield_",crop) %in% colnames(df_metricsAll)) {
+    df_metricsAll[, paste0("norm_gap_",crop)] = NA
+    for (province in unique(df_maxyield$province)) {
+      print(paste0("Province: ", province, "   Crop: ", crop))
+      yield_gap = df_metricsAll[df_metricsAll$province == province , paste0("yield_gap_",crop)]
+      maxVal    = max(yield_gap, na.rm = T)
+      minVal    = min(yield_gap, na.rm = T)
+      df_metricsAll[df_metricsAll$province == province , paste0("norm_gap_",crop)] = (yield_gap - minVal) / (maxVal-minVal)
+    }  
+  }
+}
 
+# Poll dep and poll no dep (mean and quartiles)
+colPollDep = colnames(df_metricsAll) %in% paste0("norm_gap_",pollDependent)
+colPollNot = colnames(df_metricsAll) %in% paste0("norm_gap_",pollNotDepent)
+df_pollDep = df_metricsAll[, colnames(df_metricsAll)[colPollDep]]
+df_pollNot = df_metricsAll[, colnames(df_metricsAll)[colPollNot]]
+df_metricsAll$norm_gap_pollDependent        = rowMeans(df_pollDep, na.rm = T)
+df_metricsAll$norm_gap_pollNotDependent     = rowMeans(df_pollNot, na.rm = T)
+df_metricsAll$quartile_gap_pollDependent    = ntile(df_metricsAll$norm_gap_pollDependent , 4)
+df_metricsAll$quartile_gap_pollNotDependent = ntile(df_metricsAll$norm_gap_pollNotDependent , 4)
 
