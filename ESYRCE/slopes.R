@@ -178,7 +178,7 @@ write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetri
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
 ############################
-# Annual evolution 
+# Yearly evolution 
 ############################
 # Demand
 pl_dem<-ggplot(df_filledData, aes(YEA, demand)) +
