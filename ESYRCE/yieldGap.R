@@ -28,6 +28,7 @@ for (crop in paste0("yield_",agriLand)) {
 }
 df_maxyield = df_selected %>% group_by(province) %>% summarise(across(everything(), list(max)))
 
+# Compute yield gap: max(province) - mean(segment)
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 for (crop in agriLand) {
   if (paste0("mean_yield_",crop) %in% colnames(df_metricsAll)) {
@@ -51,6 +52,14 @@ for (crop in agriLand) {
       yield_gap = df_metricsAll[df_metricsAll$province == province , paste0("yield_gap_",crop)]
       maxVal    = max(yield_gap, na.rm = T)
       minVal    = min(yield_gap, na.rm = T)
+      if ( minVal == maxVal ) {
+        if (minVal == 0) {
+          df_metricsAll[df_metricsAll$province == province , paste0("norm_gap_",crop)] = 0
+        }
+        else {
+          df_metricsAll[df_metricsAll$province == province , paste0("norm_gap_",crop)] = yield_gap / yield_gap
+        }
+      }
       df_metricsAll[df_metricsAll$province == province , paste0("norm_gap_",crop)] = (yield_gap - minVal) / (maxVal-minVal)
     }  
   }

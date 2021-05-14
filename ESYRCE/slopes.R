@@ -77,7 +77,16 @@ getSlopeAndMean = function(columns,
         colVal = df_metric[filter, column]
         maxVal = max(colVal, na.rm = T)
         minVal = min(colVal, na.rm = T)
-        df_metric[filter, column] = (colVal - minVal) / (maxVal-minVal)
+        if (maxVal == minVal) {
+          if (minVal == 0) {
+            df_metric[filter, column] = 0
+          } else {
+            df_metric[filter, column] = colVal / colVal
+          }
+        }
+        else {
+          df_metric[filter, column] = (colVal - minVal) / (maxVal-minVal)
+        }
       }
     }
     df_metric$metric = rowMeans(df_metric[,columns], na.rm = T)
