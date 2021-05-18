@@ -18,7 +18,7 @@ calculateSlope <- function(data, columns) {
   xaxis = xaxis[valid]
   yaxis = yaxis[valid]
   slope = NA
-  if (length(xaxis) > 1) { # calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
+  if (length(xaxis) > 1) { # (old) calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
     lmMod <- lm(yaxis ~ xaxis, data=data.frame(xaxis = xaxis, yaxis=yaxis))
     summ  = summary(lmMod)
     coeff = summ$coefficients
@@ -40,7 +40,7 @@ calculateSlopeOnecolumn <- function(data, columnName) {
   xaxis = xaxis[valid]
   yaxis = yaxis[valid]
   slope = NA
-  if (length(xaxis) > 1) { # calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
+  if (length(xaxis) > 1) { # (old) calculate slope only when we have at least 3 points (with 2 points, the slope might be misleading)
     lmMod <- lm(yaxis ~ xaxis, data=data.frame(xaxis = xaxis, yaxis=yaxis))
     summ  = summary(lmMod)
     coeff = summ$coefficients
