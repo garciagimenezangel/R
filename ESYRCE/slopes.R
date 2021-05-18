@@ -173,7 +173,23 @@ df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
 df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
-listMetrics = list(df_yieldDependent, df_yieldNotDepent, df_cropland, df_seminatural, df_seminatForest, df_seminatMeadow, df_seminatShrub, df_notAgri, df_edgeDensityDiss, df_avgFieldSize, df_diversity, df_intensification, df_demand, df_pollScore, df_pollService, df_croplandDependent, df_croplandNotDepent)
+listMetrics = list(df_yieldDependent, 
+                   df_yieldNotDepent, 
+                   df_cropland, 
+                   df_seminatural, 
+                   df_seminatForest, 
+                   df_seminatMeadow,
+                   df_seminatShrub, 
+                   df_notAgri, 
+                   df_edgeDensityDiss, 
+                   df_avgFieldSize, 
+                   df_diversity, 
+                   df_intensification, 
+                   df_demand, 
+                   df_pollScore, 
+                   df_pollService, 
+                   df_croplandDependent,
+                   df_croplandNotDepent)
 df_metrics     = listMetrics %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
 df_metricsAll  = merge(df_yieldCrops, df_metrics, by = c("D1_HUS","D2_NUM"))
 df_metricsAll  = Filter(function(x)!all(is.na(x)), df_metricsAll) # remove columns with all NA's
