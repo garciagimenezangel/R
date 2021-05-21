@@ -135,6 +135,8 @@ df_edgeDensityDiss = getSlopeAndMean("edgeDensityDiss", "edgeDensityDiss", isOne
 df_seminatForest = getSlopeAndMean(paste0("prop_",seminatural_forest), "seminatForest")
 df_seminatMeadow = getSlopeAndMean(paste0("prop_",seminatural_meadow), "seminatMeadow")
 df_seminatShrub  = getSlopeAndMean(paste0("prop_",seminatural_shrub),  "seminatShrub")
+# fallow
+df_fallow = getSlopeAndMean("prop_fallow","fallow", isOneColumn=TRUE)
 
 # CROPLAND metrics
 # FieldSize(sin disolver)

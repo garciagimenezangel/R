@@ -13,7 +13,8 @@ source("./categories.R")
 source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
-dataFileMetrics       = paste0(dataFolder, "metrics_v2021-02.csv")
+# dataFileMetrics       = paste0(dataFolder, "metrics_v2021-02.csv")
+dataFileMetrics       = paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv")
 dataFileControlPoints = paste0(dataFolder, "landCoverChange/landCoverTransitions.csv")
 
 # Método 1: usar landcover extraído en 9 puntos de control (lccp1, lccp2...) de cada segmento, y recoger todas las transiciones existentes de año a año
@@ -79,26 +80,26 @@ list_LCdestin_prob_byYear = lapply(list_LCtrans_byYear, getLCdestinProb)
 #               c("fallow",other),
 #               c("improductive",improductive),
 #               c("notAgri",notAgri))
-groups = list(c("Active Cropland",agriActive),
-              c("Fallow", lowActivity),
-              c("Forested",c(forested,otherWoodyCrop)),
-              c("Pasture",pasture),
-              c("Abandoned",abandAgri),
-              c("Unproductive",improductive),
-              c("Artificial",notAgri))
-groups = list(c("Herbaceous Crop",c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
-                                    ornamental, nursery)),
-              c("Fallow", lowActivity),
-              c("Forested",c(forested,otherWoodyCrop)),
-              c("Pasture",pasture),
-              c("Abandoned",abandAgri),
-              c("Unproductive",improductive),
-              c("Artificial",notAgri))
-groups = list(c("Agri Land",agriLand),
-              c("Seminatural",seminatural),
-              c("Abandoned",abandAgri),
-              c("Unproductive",improductive),
-              c("Artificial",notAgri))
+# groups = list(c("Active Cropland",agriActive),
+#               c("Fallow", lowActivity),
+#               c("Forested",c(forested,otherWoodyCrop)),
+#               c("Pasture",pasture),
+#               c("Abandoned",abandAgri),
+#               c("Unproductive",improductive),
+#               c("Artificial",notAgri))
+# groups = list(c("Herbaceous Crop",c(cerealGrain, legumeGrain, tuber, industrial, fodder, vegetable, orchard, 
+#                                     ornamental, nursery)),
+#               c("Fallow", lowActivity),
+#               c("Forested",c(forested,otherWoodyCrop)),
+#               c("Pasture",pasture),
+#               c("Abandoned",abandAgri),
+#               c("Unproductive",improductive),
+#               c("Artificial",notAgri))
+# groups = list(c("Agri Land",agriLand),
+#               c("Seminatural",seminatural),
+#               c("Abandoned",abandAgri),
+#               c("Unproductive",improductive),
+#               c("Artificial",notAgri))
 # groups = list(c("Poll-dep",pollDependent),
 #               c("Poll-indep",pollNotDepent),
 #               c("Unkn-dep",pollUnknown),
@@ -108,6 +109,14 @@ groups = list(c("Agri Land",agriLand),
 #               c("Abandoned",abandAgri),
 #               c("Unproductive",improductive),
 #               c("Artificial",notAgri))
+groups = list(c("Poll-dep",pollDependent),
+              c("Poll-indep",pollNotDepent),
+              c("Unkn-dep",pollUnknown),
+              c("Seminatural",seminatural2),
+              c("Fallow", c("fallow")),#lowActivity),
+              c("Abandoned",abandAgri),
+              c("Unproductive",improductive),
+              c("Artificial",notAgri))
 # Sanity check->Land cover types not in groups:
 grpElts = unlist(lapply(groups, function(x) x[2:length(x)]))
 paste0("Land cover types not considered:",landcovertypes[!(landcovertypes %in% grpElts)])
@@ -126,7 +135,7 @@ list_LCdestin_gr_byYear = lapply(list_LCtrans_byYear, getLCdestinProbByGroup)
 # PLOTS
 ############
 figFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/figures/"
-removeNoTransition = FALSE
+removeNoTransition = T
 abbreviateNames = FALSE
 
 # Evolution by year
@@ -157,7 +166,7 @@ ggsave(pngFile)
 # Origin
 target = "Seminatural"
 title = "Seminatural Land origin"
-df_plot = df_LCorigin_gr_norm
+df_plot = df_LCorigin_gr
 df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
 if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
@@ -178,7 +187,7 @@ ggsave(pngFile)
 # Destination agri land
 target = "Agri Land"
 title = "Agricultural Land destination"
-df_plot = df_LCdestin_gr_norm
+df_plot = df_LCdestin_gr
 df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
 if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
@@ -196,10 +205,73 @@ ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
 pngFile = paste0(figFolder,title,".png")
 ggsave(pngFile)
 
-# Origin poll-dep crops
+# Destination fallow
+target = "Fallow"
+title = "Fallow destination"
+df_plot = df_LCdestin_gr
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+  ylab("Percentage") +
+  xlab("Land cover category") +
+  geom_bar(stat="identity") + 
+  ggtitle(title)
+# Save in a png file
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile, width = 8, height = 8, dpi = 250, units = "in", device='png')
+
+# Destination poll-dep crops
 target = "Poll-dep"
-title = "Poll-dep crops origin"
-df_plot = df_LCorigin_gr_norm
+title = "Poll-dep crops destination"
+df_plot = df_LCdestin_gr
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+  ylab("Percentage") +
+  xlab("Land cover category") +
+  geom_bar(stat="identity") + 
+  ggtitle(title)
+# Save in a png file
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile, width = 8, height = 8, dpi = 250, units = "in", device='png')
+
+# Destination poll-indep crops
+target = "Poll-indep"
+title = "Poll-indep crops destination"
+df_plot = df_LCdestin_gr
+df_melt = melt(as.matrix(df_plot))
+colnames(df_melt) = c("origin","final","value")
+if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
+if (abbreviateNames) {
+  df_melt$origin = abbreviate(df_melt$origin)
+  df_melt$final  = abbreviate(df_melt$final)  
+}
+df_melt_sel = df_melt[df_melt$origin == target,]
+ggplot(data=df_melt_sel, aes(x=final, y=value*100)) +
+  ylab("Percentage") +
+  xlab("Land cover category") +
+  geom_bar(stat="identity") + 
+  ggtitle(title)
+# Save in a png file
+pngFile = paste0(figFolder,title,".png")
+ggsave(pngFile, width = 8, height = 8, dpi = 250, units = "in", device='png')
+
+# Origin poll-indep crops
+target = "Poll-indep"
+title = "Poll-indep crops origin"
+df_plot = df_LCorigin_gr
 df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
 if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
@@ -215,10 +287,10 @@ ggplot(data=df_melt_sel, aes(x=final, y=value)) +
 pngFile = paste0(figFolder,title,".png")
 ggsave(pngFile)
 
-# Origin poll-indep crops
-target = "Poll-indep"
-title = "Poll-indep crops origin"
-df_plot = df_LCorigin_gr_norm
+# Origin poll-dep crops
+target = "Poll-dep"
+title = "Poll-dep crops origin"
+df_plot = df_LCorigin_gr
 df_melt = melt(as.matrix(df_plot))
 colnames(df_melt) = c("origin","final","value")
 if (removeNoTransition) df_melt = df_melt[ df_melt$origin != df_melt$final , ]
@@ -228,11 +300,12 @@ if (abbreviateNames) {
 }
 df_melt_sel = df_melt[df_melt$origin == target,]
 ggplot(data=df_melt_sel, aes(x=final, y=value)) +
-    geom_bar(stat="identity") + 
-    ggtitle(title) + ylim(0,0.25)
+  geom_bar(stat="identity") + 
+  ggtitle(title) + ylim(0,0.25)
 # Save in a png file
 pngFile = paste0(figFolder,title,".png")
-ggsave(pngFile)
+ggsave(pngFile, width = 8, height = 8, dpi = 250, units = "in", device='png')
+
 
 # All groups
 # (p1<-ggplot(data=df_melt, aes(x=final, y=value)) +

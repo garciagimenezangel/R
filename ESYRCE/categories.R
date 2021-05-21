@@ -250,4 +250,4 @@ pollUnknown   = unknown
 seminatural_forest = c("conifers", "broadleafFast", "broadleafSlow", "poplar", "mixedForest")
 seminatural_meadow = c("naturalMeadow", "highMountainMeadow")
 seminatural_shrub  = c("pastureGrassland", "pastureShrub", "shrub")   
-
+seminatural2 = c(seminatural_forest, seminatural_meadow, seminatural_shrub) # seminatural used in the ESYRCE paper (almost equal to seminatural except for "pawlonia", "quercusIlexTruffle", "carobTree", "otherOtherWoody")
