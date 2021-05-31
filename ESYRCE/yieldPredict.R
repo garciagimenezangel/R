@@ -79,7 +79,7 @@ commCols  = c("D1_HUS", "D2_NUM", "province", "region", "YEA")
 metrics   = c("avgFieldSizeDiss", "avgSeminatSizeDiss", "heterogeneity", "edgeDenSeminat", "edgeDensity")
 useCols   = c(commCols, metrics, stackCols)
 df_yield  = df_data[, useCols]
-df_stack  = data.frame(df_yield[,c(commCols, metrics)], stack(df_yield[,columns]))
+df_stack  = data.frame(df_yield[,c(commCols, metrics)], stack(df_yield[,stackCols]))
 df_stack  = na.omit(df_stack) #remove all NA observations for yield
 df_stack$site<-paste(df_stack$D1_HUS, df_stack$D2_NUM) #unique identifier for each site combination of HUS and NUM
 
