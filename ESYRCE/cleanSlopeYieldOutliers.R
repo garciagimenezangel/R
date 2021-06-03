@@ -48,4 +48,4 @@ for (crop in unique(df_stack_raw$crop)) {
 }
 
 # Save
-write.csv(df_metricsAll, file=paste0(dataFolder,"metrics_v2021-02-25_CLEAN_YIELD.csv"),row.names=FALSE)
+write.csv(df_metricsAll, file=paste0(dataFolder,"slopeMetrics_cleanSlopeYield.csv"),row.names=FALSE)

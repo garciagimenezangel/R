@@ -23,7 +23,7 @@ seminatural = c(seminatural_forest, seminatural_meadow, seminatural_shrub) # sem
 # Read data
 # dataFolder = "C:/Users/angel.gimenez/Google Drive/PROJECTS/OBSERV/ESYRCE/"
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
-df_filledData = read.csv(file=paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv"),header=T)
+df_filledData = read.csv(file=paste0(dataFolder,"metrics_v2021-02-25_FILLED_CLEANYIELD.csv"),header=T)
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
 calculateCategory <- function(data, columnName) {

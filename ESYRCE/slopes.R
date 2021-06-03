@@ -75,17 +75,21 @@ getSlopeAndMean = function(columns,
       for (column in columns) {
         filter = (df_metric$province == province)
         colVal = df_metric[filter, column]
-        maxVal = max(colVal, na.rm = T)
-        minVal = min(colVal, na.rm = T)
-        if (maxVal == minVal) {
-          if (minVal == 0) {
-            df_metric[filter, column] = 0
-          } else {
-            df_metric[filter, column] = colVal / colVal
+        if (!all(is.na(colVal))) {
+          maxVal = max(colVal, na.rm = T)
+          minVal = min(colVal, na.rm = T)
+          if (maxVal == minVal) {
+            if (minVal == 0) {
+              df_metric[filter, column] = 0
+            } else {
+              df_metric[filter, column] = colVal / colVal
+            }
           }
-        }
-        else {
-          df_metric[filter, column] = (colVal - minVal) / (maxVal-minVal)
+          else {
+            df_metric[filter, column] = (colVal - minVal) / (maxVal-minVal)
+          }
+        } else {
+          df_metric[filter, column] = NA
         }
       }
     }
@@ -171,8 +175,8 @@ for (crop in agriLand) {
   i=i+1
 }
 df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
-write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
-# df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
+# write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
+df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
 listMetrics = list(df_yieldDependent, 
@@ -202,7 +206,7 @@ df_province = df_filledData %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=
 df_metricsAll = merge(df_metricsAll, df_province, by=c("D1_HUS", "D2_NUM")) # add province
 
 # SAVE/READ
-write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics2.csv"),row.names=FALSE)
+# write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
 ############################
