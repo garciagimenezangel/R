@@ -20,7 +20,7 @@ source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 
 # Read datasets
-dataFile     = paste0(dataFolder, "metrics_v2021-02-25.csv")
+dataFile     = paste0(dataFolder, "metrics_v2021-02-25_CLEAN_YIELD.csv")
 df_data      = read.csv(dataFile, header=T)
 
 ############################
@@ -49,8 +49,8 @@ fillInNotVisitedYears = function(data, maxYear) {
 }
 maxYear = 2019
 df_filledData = df_data %>% group_by(D1_HUS, D2_NUM) %>% do(data.frame(fillInNotVisitedYears(., maxYear)))
-#write.csv(df_filledData, file=paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv"),row.names=FALSE)
-df_filledData = read.csv(file=paste0(dataFolder,"metrics_v2021-02-25_FILLED.csv"),header=T)
+# write.csv(df_filledData, file=paste0(dataFolder,"metrics_v2021-02-25_FILLED_CLEANYIELD.csv"),row.names=FALSE)
+df_filledData = read.csv(file=paste0(dataFolder,"metrics_v2021-02-25_FILLED_CLEANYIELD.csv"),header=T)
 
 ############################
 # Slopes 
@@ -171,13 +171,14 @@ for (crop in agriLand) {
   i=i+1
 }
 df_yieldCrops = listSlopeYield %>% reduce(left_join, by = c("D1_HUS","D2_NUM"))
-# write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
-df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
+write.csv(df_yieldCrops, file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"),row.names=FALSE)
+# df_yieldCrops = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeYieldCrops.csv"), header = T)
 
 # MERGE EVERYTHING
 listMetrics = list(df_yieldDependent, 
                    df_yieldNotDepent, 
                    df_cropland, 
+                   df_fallow,
                    df_seminatural, 
                    df_seminatForest, 
                    df_seminatMeadow,
@@ -201,7 +202,7 @@ df_province = df_filledData %>% group_by(D1_HUS, D2_NUM) %>% summarise(province=
 df_metricsAll = merge(df_metricsAll, df_province, by=c("D1_HUS", "D2_NUM")) # add province
 
 # SAVE/READ
-write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"),row.names=FALSE)
+write.csv(df_metricsAll, file=paste0(dataFolder,"intermediateProducts/slopeMetrics2.csv"),row.names=FALSE)
 df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
 
 ############################
