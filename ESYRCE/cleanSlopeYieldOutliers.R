@@ -16,7 +16,7 @@ source("./functions.R")
 dataFolder = "G:/My Drive/PROJECTS/OBSERV/ESYRCE/"
 
 # Read datasets
-df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics.csv"), header=T)
+df_metricsAll = read.csv(file=paste0(dataFolder,"intermediateProducts/slopeMetrics_cleanSlopeYield.csv"), header=T)
 
 # Histograms by crop
 # Stack crops

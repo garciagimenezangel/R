@@ -3,7 +3,6 @@ library(sp)
 library(rgdal)
 library(tidyverse)
 library(DescTools)
-source("./categories.R")
 
 ####################################
 # INPUT: 
