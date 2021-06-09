@@ -51,3 +51,18 @@ for (crop in agriLand) {
 
 # Save
 write.csv(df_data, file=paste0(dataFolder,"metrics_v2021-02-25_CLEAN_YIELD.csv"),row.names=FALSE)
+
+# Compute number of removed data (outliers)
+dataFile2 = paste0(dataFolder, "metrics_v2021-02-25_CLEAN_YIELD.csv")
+df_agriLand1 = df_data[ , paste0("yield_", agriLand)]
+df_agriLand2 = df_data2[ , paste0("yield_", agriLand)]
+df_stack_raw1 = stack(df_agriLand1)
+df_stack_raw2 = stack(df_agriLand2)
+not_nas    = sum(!is.na(df_stack_raw1$values))
+nas_before = sum(is.na(df_stack_raw1$values))
+nas_after  = sum(is.na(df_stack_raw2$values))
+outliers_removed = nas_after - nas_before
+percentage = outliers_removed / not_nas
+
+
+
