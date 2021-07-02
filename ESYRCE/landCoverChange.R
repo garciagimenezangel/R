@@ -8,6 +8,8 @@ source("./scripts/categories.R")
 source("./scripts/functions.R")
 dataFolder = "./clean_data/"
 
+# df_LCtransitions = getLandCoverTransitionsFromControlPoints("G:/My Drive/PROJECTS/OBSERV/ESYRCE/metrics_v2021-02-25_FILLED.csv") # Method 1 (that file doesn't have the necessary lccpX columns, we would need to compute them again)
+# df_LCtransitions = getLandCoverTransitionsFromProportion("G:/My Drive/PROJECTS/OBSERV/ESYRCE/metrics_v2021-02-25_FILLED.csv")    # Method 2
 df_LCtransitions = read.csv(paste0(dataFolder,"landCoverChange_method2.csv"), row.names = 1)
 
 ############################
