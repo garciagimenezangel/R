@@ -15,3 +15,8 @@ getBiomeFromID = function(biomeNum) {
 # Examples:
 getBiomeFromID(5)
 getEcoNameFromID(118)
+
+for (i in seq(1,14)) {
+  print(i)
+  print(getBiomeFromID(i))
+}
